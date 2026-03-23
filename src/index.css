@@ -33,24 +33,10 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html {
-  height: 100%;
-  height: -webkit-fill-available;
-}
-
-body {
-  height: 100%;
-  height: -webkit-fill-available;
+html, body, #root {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-display);
-  overflow: hidden;
-}
-
-#root {
-  height: 100%;
-  background: var(--bg);
-  overflow: hidden;
 }
 
 input, textarea, button { font-family: var(--font-display); }
@@ -58,17 +44,9 @@ input, textarea, button { font-family: var(--font-display); }
 ::-webkit-scrollbar { width: 0; }
 
 .app {
-  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg);
   max-width: 430px;
   margin: 0 auto;
-  overflow: hidden;
-}
-
-.bottom-nav {
-  max-width: 430px;
-  left: 50%;
-  transform: translateX(-50%);
 }

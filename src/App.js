@@ -152,7 +152,7 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
         </div>
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-          Your<br />Training Plan
+          Aaryaman's<br />Training Plan
         </h1>
       </div>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -662,10 +662,10 @@ function BottomNav({ tab, setTab }) {
   ];
   return (
     <div style={{
-      position: 'sticky', bottom: 0, flexShrink: 0,
       display: 'flex', background: 'var(--bg2)',
       borderTop: '1px solid var(--border)',
       paddingBottom: 'calc(var(--safe-bottom) + 8px)',
+      flexShrink: 0,
     }}>
       {items.map(item => (
         <button key={item.id} onClick={() => setTab(item.id)} style={{
