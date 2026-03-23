@@ -1,0 +1,56 @@
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #0a0a0a;
+  --bg2: #111111;
+  --bg3: #1a1a1a;
+  --bg4: #222222;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0ede8;
+  --text2: #8a8780;
+  --text3: #555450;
+  --run: #e8583a;
+  --run-bg: rgba(232,88,58,0.12);
+  --run-border: rgba(232,88,58,0.3);
+  --swim: #3a8fe8;
+  --swim-bg: rgba(58,143,232,0.12);
+  --swim-border: rgba(58,143,232,0.3);
+  --cycle: #e8a83a;
+  --cycle-bg: rgba(232,168,58,0.12);
+  --cycle-border: rgba(232,168,58,0.3);
+  --bonus: #5ac47a;
+  --bonus-bg: rgba(90,196,122,0.12);
+  --bonus-border: rgba(90,196,122,0.3);
+  --rest: #444;
+  --rest-bg: rgba(255,255,255,0.04);
+  --rest-border: rgba(255,255,255,0.08);
+  --accent: #e8583a;
+  --success: #5ac47a;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  overflow: hidden;
+}
+
+input, textarea, button { font-family: var(--font-display); }
+
+::-webkit-scrollbar { width: 0; }
+
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  max-width: 430px;
+  margin: 0 auto;
+  overflow: hidden;
+}
