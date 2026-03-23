@@ -6,15 +6,14 @@ const EDITS_KEY = 'training_edits_v1';
 const PBS_KEY = 'training_pbs_v1';
 
 const STARTING_PBS = {
-  run5k:   { label: '5K',           start: '25:46', current: '25:46', unit: 'time' },
-  run10k:  { label: '10K',          start: '55:59', current: '55:59', unit: 'time' },
-  runHalf: { label: 'Half marathon',start: '2:17:00',current:'2:17:00',unit:'time' },
-  swim100: { label: 'Swim 100m',    start: '2:24',  current: '2:24',  unit: 'pace' },
-  swim400: { label: 'Swim 400m',    start: '9:36',  current: '9:36',  unit: 'time' },
-  swim1100:{ label: 'Swim 1100m',   start: '43:56', current: '43:56', unit: 'time' },
+  run5k:   { label: '5K',            start: '25:46',  current: '25:46',  unit: 'time' },
+  run10k:  { label: '10K',           start: '55:59',  current: '55:59',  unit: 'time' },
+  runHalf: { label: 'Half marathon', start: '2:17:00',current: '2:17:00',unit: 'time' },
+  swim100: { label: 'Swim 100m',     start: '2:24',   current: '2:24',   unit: 'pace' },
+  swim400: { label: 'Swim 400m',     start: '9:36',   current: '9:36',   unit: 'time' },
+  swim1100:{ label: 'Swim 1100m',    start: '43:56',  current: '43:56',  unit: 'time' },
 };
 
-// Convert mm:ss or h:mm:ss to total seconds for comparison
 function toSeconds(str) {
   if (!str) return Infinity;
   const parts = str.trim().split(':').map(Number);
@@ -85,7 +84,6 @@ function StatPill({ label, val }) {
   );
 }
 
-// ── PB CELEBRATION MODAL ─────────────────────────────────────────────────────
 function PBModal({ pbs: newPBs, onConfirm, onDismiss }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '0 24px' }}>
@@ -121,7 +119,6 @@ function PBModal({ pbs: newPBs, onConfirm, onDismiss }) {
   );
 }
 
-// ── HOME SCREEN ──────────────────────────────────────────────────────────────
 function HomeScreen({ log, setLog, edits, onOpenDay }) {
   const today = new Date();
   const totalSessions = PLAN.reduce((a, w) => a + w.days.filter(d => d.type !== 'rest').length, 0);
@@ -146,15 +143,16 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
   })();
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 40px' }}>
+    <div style={{ padding: '0 20px 40px' }}>
       <div style={{ paddingTop: 'calc(var(--safe-top) + 24px)', marginBottom: 32 }}>
         <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.1em', marginBottom: 6 }}>
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
         </div>
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-          Aaryaman's<br />Training Plan
+          Your<br />Training Plan
         </h1>
       </div>
+
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <ProgressRing pct={pct} size={64} stroke={4} color="#e8583a" />
@@ -235,7 +233,6 @@ function TodayCard({ week, day, log, edits, onPress }) {
   );
 }
 
-// ── LOG MODAL WITH PB INPUTS ─────────────────────────────────────────────────
 function LogModal({ sessionType, onSave, onClose, existing }) {
   const isRun = sessionType === 'run' || sessionType === 'bonus';
   const isSwim = sessionType === 'swim';
@@ -259,7 +256,6 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
       <div style={{ width: '100%', background: 'var(--bg2)', borderRadius: '20px 20px 0 0', padding: '24px 24px calc(24px + var(--safe-bottom))', border: '1px solid var(--border)', maxHeight: '85vh', overflowY: 'auto' }}>
         <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Log this session</div>
         <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 20 }}>Fill in any PB efforts from today</div>
-
         <div style={rowStyle}>
           <label style={labelStyle}>ACTUAL PACE / AVG PACE</label>
           <input value={pace} onChange={e => setPace(e.target.value)} placeholder="e.g. 5:45/km" style={inputStyle} />
@@ -268,11 +264,10 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
           <label style={labelStyle}>AVG HEART RATE (BPM)</label>
           <input value={hr} onChange={e => setHr(e.target.value)} placeholder="e.g. 152" style={inputStyle} />
         </div>
-
         {isRun && (
           <>
             <div style={{ fontSize: 12, color: 'var(--text2)', margin: '16px 0 12px', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-              If you hit a timed effort today, enter it below — we'll check against your PB automatically.
+              If you hit a timed effort today, log it below — we'll check against your PB automatically.
             </div>
             <div style={rowStyle}>
               <label style={labelStyle}>5K TIME (mm:ss)</label>
@@ -288,11 +283,10 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
             </div>
           </>
         )}
-
         {isSwim && (
           <>
             <div style={{ fontSize: 12, color: 'var(--text2)', margin: '16px 0 12px', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-              If you hit a timed swim effort today, enter it below.
+              If you hit a timed swim effort today, log it below.
             </div>
             <div style={rowStyle}>
               <label style={labelStyle}>100M PACE (mm:ss)</label>
@@ -308,7 +302,6 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
             </div>
           </>
         )}
-
         <div style={rowStyle}>
           <label style={labelStyle}>NOTES</label>
           <textarea value={notes} onChange={e => setNotes(e.target.value)}
@@ -316,7 +309,6 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
             rows={3}
             style={{ ...inputStyle, resize: 'none', fontFamily: 'var(--font-display)' }} />
         </div>
-
         <button onClick={() => onSave({ pace, hr, notes, pb5k, pb10k, pbHalf, pbSwim100, pbSwim400, pbSwim1100 })}
           style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#e8583a', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
           Save Session
@@ -326,7 +318,6 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
   );
 }
 
-// ── PLAN SCREEN ──────────────────────────────────────────────────────────────
 function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setPbs }) {
   const [week, setWeek] = useState(initWeek || 0);
   const [day, setDay] = useState(initDay || 0);
@@ -364,8 +355,6 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
     const today = new Date().toISOString().split('T')[0];
     setLog({ ...log, [`${week}_${day}`]: { ...logEntry, done: true, date: today, ...data } });
     setLogModal(false);
-
-    // Check for PBs
     const candidates = [];
     const checks = [
       { key: 'run5k',    val: data.pb5k },
@@ -388,7 +377,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
   const confirmPBs = () => {
     const updated = { ...pbs };
     pendingPBs.forEach(pb => {
-      updated[pb.key] = { ...( pbs[pb.key] || STARTING_PBS[pb.key] ), current: pb.new };
+      updated[pb.key] = { ...(pbs[pb.key] || STARTING_PBS[pb.key]), current: pb.new };
     });
     setPbs(updated);
     setPendingPBs([]);
@@ -397,10 +386,10 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
   const c = tc(sessionData.type);
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div>
       {pendingPBs.length > 0 && <PBModal pbs={pendingPBs} onConfirm={confirmPBs} onDismiss={() => setPendingPBs([])} />}
 
-      <div style={{ padding: '16px 20px 0', paddingTop: 'calc(var(--safe-top) + 16px)', flexShrink: 0 }}>
+      <div style={{ padding: '16px 20px 0', paddingTop: 'calc(var(--safe-top) + 16px)' }}>
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 12, scrollbarWidth: 'none' }}>
           {PLAN.map((w, wi) => (
             <button key={wi} onClick={() => { setWeek(wi); setDay(0); setView('week'); }}
@@ -416,7 +405,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
       </div>
 
       {view === 'week' ? (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 40px' }}>
+        <div style={{ padding: '0 20px 40px' }}>
           <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 16, padding: '12px', background: 'var(--bg2)', borderRadius: 10, border: '1px solid var(--border)' }}>
             {PLAN[week].summary}
           </div>
@@ -448,7 +437,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
           })}
         </div>
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 40px' }}>
+        <div style={{ padding: '0 20px 40px' }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
             {DAY_NAMES.map((dn, di) => {
               const d = PLAN[week].days[di];
@@ -556,7 +545,6 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
   );
 }
 
-// ── STATS SCREEN ─────────────────────────────────────────────────────────────
 function StatsScreen({ log, pbs }) {
   const entries = Object.entries(log).filter(([k, v]) => !k.startsWith('_') && !k.startsWith('date_') && v.done);
   const runEntries = entries.filter(([k]) => {
@@ -571,18 +559,16 @@ function StatsScreen({ log, pbs }) {
     const [wi, di] = k.split('_').map(Number);
     return { label: `W${wi+1} ${DAY_NAMES[di]}`, pace: v.pace, hr: v.hr };
   });
-
   const mergedPBs = { ...STARTING_PBS };
   Object.keys(pbs).forEach(k => {
     if (mergedPBs[k]) mergedPBs[k] = { ...mergedPBs[k], current: pbs[k].current };
   });
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 40px' }}>
+    <div style={{ padding: '0 20px 40px' }}>
       <div style={{ paddingTop: 'calc(var(--safe-top) + 24px)', marginBottom: 24 }}>
         <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' }}>Progress</h2>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
         {[
           { label: 'Sessions done', val: entries.length },
@@ -597,7 +583,6 @@ function StatsScreen({ log, pbs }) {
         ))}
       </div>
 
-      {/* PBs — live updating */}
       <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>PERSONAL BESTS</div>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px', marginBottom: 24 }}>
         {Object.values(mergedPBs).map(({ label, start, current }, i, arr) => {
@@ -653,7 +638,6 @@ function StatsScreen({ log, pbs }) {
   );
 }
 
-// ── BOTTOM NAV ────────────────────────────────────────────────────────────────
 function BottomNav({ tab, setTab }) {
   const items = [
     { id: 'home', label: 'Home', icon: '⌂' },
@@ -662,10 +646,10 @@ function BottomNav({ tab, setTab }) {
   ];
   return (
     <div style={{
-      display: 'flex', background: 'var(--bg2)',
+      display: 'flex',
+      background: 'var(--bg2)',
       borderTop: '1px solid var(--border)',
       paddingBottom: 'calc(var(--safe-bottom) + 8px)',
-      flexShrink: 0,
     }}>
       {items.map(item => (
         <button key={item.id} onClick={() => setTab(item.id)} style={{
@@ -680,7 +664,6 @@ function BottomNav({ tab, setTab }) {
   );
 }
 
-// ── APP ROOT ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState('home');
   const [log, setLog] = useStorage(STORAGE_KEY, {});
