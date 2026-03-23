@@ -149,7 +149,7 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
         </div>
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-          Your<br />Training Plan
+          Aaryaman's<br />Training Plan
         </h1>
       </div>
 
