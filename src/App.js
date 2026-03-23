@@ -331,10 +331,10 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits }) {
           {/* Session steps */}
           <div style={{ marginBottom: 16 }}>
             {sessionData.sets.map((s, si) => (
-              <div key={si} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--text2)', flexShrink: 0, fontFamily: 'var(--font-mono)', marginTop: 1 }}>{si + 1}</div>
-                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, flex: 1 }}>{s}</div>
-              </div>
+             <div key={si} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+               <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--text2)', flexShrink: 0, fontFamily: 'var(--font-mono)', marginTop: 1, minWidth: 20 }}>{si + 1}</div>
+               <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, flex: 1, minWidth: 0 }}>{s}</div>
+             </div>
             ))}
           </div>
 
