@@ -66,3 +66,9 @@ input, textarea, button { font-family: var(--font-display); }
   margin: 0 auto;
   overflow: hidden;
 }
+
+.bottom-nav {
+  max-width: 430px;
+  left: 50%;
+  transform: translateX(-50%);
+}
