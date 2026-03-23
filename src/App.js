@@ -49,7 +49,7 @@ function ProgressRing({ pct, size = 36, stroke = 3, color = '#e8583a' }) {
 }
 
 // ── HOME SCREEN ─────────────────────────────────────────────────────────────
-function HomeScreen({ log, edits, onOpenDay }) {
+function HomeScreen({ log, setLog, edits, onOpenDay }) {
   const today = new Date();
   const totalSessions = PLAN.reduce((a, w) => a + w.days.filter(d => d.type !== 'rest').length, 0);
   const completedCount = Object.values(log).filter(v => v.done).length;
@@ -83,7 +83,7 @@ function HomeScreen({ log, edits, onOpenDay }) {
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
         </div>
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-          Your<br />Training Plan
+          Aaryaman's<br />Training Plan
         </h1>
       </div>
 
@@ -101,12 +101,27 @@ function HomeScreen({ log, edits, onOpenDay }) {
       </div>
 
       {/* Today's suggestion */}
-      {startDate && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 8 }}>TODAY'S SESSION</div>
-          <TodayCard week={suggestWeek} day={suggestDay} log={log} edits={edits} onPress={() => onOpenDay(suggestWeek, suggestDay)} />
-        </div>
-      )}
+      {!startDate && (
+  <div style={{ marginBottom: 16 }}>
+    <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 8 }}>START PLAN</div>
+    <div onClick={() => {
+      const today = new Date().toISOString().split('T')[0];
+      setLog({ ...log, _startDate: today });
+    }} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Begin your plan today</div>
+        <div style={{ fontSize: 12, color: 'var(--text2)' }}>Tap to set today as Day 1</div>
+      </div>
+      <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e8583a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff' }}>→</div>
+    </div>
+  </div>
+)}
+{startDate && (
+  <div style={{ marginBottom: 16 }}>
+    <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 8 }}>TODAY'S SESSION</div>
+    <TodayCard week={suggestWeek} day={suggestDay} log={log} edits={edits} onPress={() => onOpenDay(suggestWeek, suggestDay)} />
+  </div>
+)}
 
       {/* Quick week overview */}
       <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 8 }}>ALL WEEKS</div>
@@ -530,7 +545,7 @@ export default function App() {
 
   return (
     <div className="app">
-      {tab === 'home' && <HomeScreen log={log} edits={edits} onOpenDay={goToDay} />}
+      {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} />}
       {tab === 'plan' && (
         <PlanScreen
           key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}
@@ -539,7 +554,7 @@ export default function App() {
           log={log} setLog={setLog}
           edits={edits} setEdits={setEdits}
         />
-      )}
+      )}3
       {tab === 'stats' && <StatsScreen log={log} />}
       <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} />
     </div>
