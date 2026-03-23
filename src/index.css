@@ -33,11 +33,23 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html, body, #root {
+html {
   height: 100%;
+  height: -webkit-fill-available;
+}
+
+body {
+  height: 100%;
+  height: -webkit-fill-available;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-display);
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  background: var(--bg);
   overflow: hidden;
 }
 
@@ -46,7 +58,7 @@ input, textarea, button { font-family: var(--font-display); }
 ::-webkit-scrollbar { width: 0; }
 
 .app {
-  height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg);

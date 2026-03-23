@@ -498,7 +498,9 @@ function BottomNav({ tab, setTab }) {
   return (
     <div style={{
       position: 'relative', display: 'flex', background: 'var(--bg2)',
-      borderTop: '1px solid var(--border)', paddingBottom: 'var(--safe-bottom)',
+      borderTop: '1px solid var(--border)',
+      paddingBottom: 'calc(var(--safe-bottom) + 8px)',
+      marginBottom: 0,
     }}>
       {items.map(item => (
         <button key={item.id} onClick={() => setTab(item.id)} style={{
