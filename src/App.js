@@ -497,9 +497,10 @@ function BottomNav({ tab, setTab }) {
   ];
   return (
     <div style={{
-      position: 'relative', display: 'flex', background: 'var(--bg2)',
+      position: 'sticky', bottom: 0, display: 'flex', background: 'var(--bg2)',
       borderTop: '1px solid var(--border)',
       paddingBottom: 'calc(var(--safe-bottom) + 8px)',
+      flexShrink: 0,
       marginBottom: 0,
     }}>
       {items.map(item => (
