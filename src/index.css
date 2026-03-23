@@ -33,10 +33,19 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html, body, #root {
-  background: var(--bg);
+html {
+  background: #0a0a0a;
+}
+
+body {
+  background: #0a0a0a;
   color: var(--text);
   font-family: var(--font-display);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#root {
+  background: #0a0a0a;
 }
 
 input, textarea, button { font-family: var(--font-display); }
@@ -46,7 +55,8 @@ input, textarea, button { font-family: var(--font-display); }
 .app {
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: #0a0a0a;
   max-width: 430px;
   margin: 0 auto;
+  padding-bottom: 80px;
 }

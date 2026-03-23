@@ -646,10 +646,14 @@ function BottomNav({ tab, setTab }) {
   ];
   return (
     <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
       display: 'flex',
-      background: 'var(--bg2)',
-      borderTop: '1px solid var(--border)',
-      paddingBottom: 'calc(var(--safe-bottom) + 8px)',
+      background: '#111111',
+      borderTop: '1px solid rgba(255,255,255,0.08)',
+      paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+      zIndex: 50,
+      maxWidth: 430,
+      margin: '0 auto',
     }}>
       {items.map(item => (
         <button key={item.id} onClick={() => setTab(item.id)} style={{
