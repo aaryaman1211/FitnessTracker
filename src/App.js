@@ -129,7 +129,7 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
   if (startDate) {
     const diffDays = Math.floor((today - startDate) / 86400000);
     suggestWeek = Math.min(Math.floor(diffDays / 7), 7);
-    suggestDay = diffDays % 7;
+    suggestDay = (today.getDay() + 6) % 7;
   }
   const streakDays = (() => {
     let streak = 0;
