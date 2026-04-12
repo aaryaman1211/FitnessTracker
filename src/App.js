@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PLAN, TYPE_COLORS, DAY_NAMES, DAY_NAMES_FULL } from './planData';
+import { supabase } from './supabase';
+import Auth from './Auth';
 
 const STORAGE_KEY = 'training_log_v1';
 const EDITS_KEY = 'training_edits_v1';
@@ -638,7 +640,7 @@ function StatsScreen({ log, pbs }) {
   );
 }
 
-function BottomNav({ tab, setTab }) {
+function BottomNav({ tab, setTab, onSignOut }) {
   const items = [
     { id: 'home', label: 'Home', icon: '⌂' },
     { id: 'plan', label: 'Plan', icon: '◫' },
@@ -646,14 +648,9 @@ function BottomNav({ tab, setTab }) {
   ];
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      display: 'flex',
-      background: '#111111',
-      borderTop: '1px solid rgba(255,255,255,0.08)',
-      paddingBottom: 'env(safe-area-inset-bottom, 8px)',
-      zIndex: 50,
-      maxWidth: 430,
-      margin: '0 auto',
+      display: 'flex', background: 'var(--bg2)',
+      borderTop: '1px solid var(--border)',
+      paddingBottom: 'calc(var(--safe-bottom) + 8px)',
     }}>
       {items.map(item => (
         <button key={item.id} onClick={() => setTab(item.id)} style={{
@@ -664,18 +661,46 @@ function BottomNav({ tab, setTab }) {
           <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: tab === item.id ? '#e8583a' : 'var(--text3)', letterSpacing: '0.04em' }}>{item.label.toUpperCase()}</span>
         </button>
       ))}
+      <button onClick={onSignOut} style={{
+        flex: 1, padding: '12px 0 10px', background: 'transparent', border: 'none', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+      }}>
+        <span style={{ fontSize: 20, lineHeight: 1, color: 'var(--text3)' }}>⇥</span>
+        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)', letterSpacing: '0.04em' }}>OUT</span>
+      </button>
     </div>
   );
 }
 
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState('home');
   const [log, setLog] = useStorage(STORAGE_KEY, {});
   const [edits, setEdits] = useStorage(EDITS_KEY, {});
   const [pbs, setPbs] = useStorage(PBS_KEY, {});
   const [planNav, setPlanNav] = useState(null);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const goToDay = (week, day) => { setPlanNav({ week, day }); setTab('plan'); };
+
+  if (authLoading) return (
+    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontSize: 13, color: '#8a8780', fontFamily: "'DM Mono', monospace" }}>Loading...</div>
+    </div>
+  );
+
+  if (!session) return <Auth />;
 
   return (
     <div className="app">
@@ -690,7 +715,7 @@ export default function App() {
         />
       )}
       {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
-      <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} />
+      <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
     </div>
   );
 }
