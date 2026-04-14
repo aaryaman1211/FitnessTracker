@@ -41,9 +41,6 @@ html, body {
 
 #root {
   background: #0a0a0a;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 input, textarea, button { font-family: 'Syne', sans-serif; }
@@ -53,7 +50,7 @@ input, textarea, button { font-family: 'Syne', sans-serif; }
 .app {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  min-height: 100vh;
   background: #0a0a0a;
   max-width: 430px;
   width: 100%;
@@ -62,4 +59,8 @@ input, textarea, button { font-family: 'Syne', sans-serif; }
 
 .app-content {
   flex: 1;
+}
+
+.app-nav {
+  margin-top: auto;
 }

@@ -717,7 +717,9 @@ export default function App() {
       )}
       {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
     </div>
-    <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
+    <div className="app-nav">
+      <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
+    </div>
   </div>
 );
 }
