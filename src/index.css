@@ -63,4 +63,6 @@ input, textarea, button { font-family: 'Syne', sans-serif; }
 
 .app-nav {
   margin-top: auto;
+  position: sticky;
+  bottom: 0;
 }
