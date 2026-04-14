@@ -703,7 +703,8 @@ export default function App() {
   if (!session) return <Auth />;
 
   return (
-    <div className="app">
+  <div className="app">
+    <div className="app-content">
       {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} />}
       {tab === 'plan' && (
         <PlanScreen
@@ -715,7 +716,8 @@ export default function App() {
         />
       )}
       {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
-      <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
     </div>
-  );
+    <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
+  </div>
+);
 }

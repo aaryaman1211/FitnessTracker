@@ -33,30 +33,33 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html {
+html, body {
   background: #0a0a0a;
-}
-
-body {
-  background: #0a0a0a;
-  color: var(--text);
-  font-family: var(--font-display);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color: #f0ede8;
+  font-family: 'Syne', sans-serif;
 }
 
 #root {
   background: #0a0a0a;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-input, textarea, button { font-family: var(--font-display); }
+input, textarea, button { font-family: 'Syne', sans-serif; }
 
 ::-webkit-scrollbar { width: 0; }
 
 .app {
   display: flex;
   flex-direction: column;
+  flex: 1;
   background: #0a0a0a;
   max-width: 430px;
+  width: 100%;
   margin: 0 auto;
-  padding-bottom: 80px;
+}
+
+.app-content {
+  flex: 1;
 }
