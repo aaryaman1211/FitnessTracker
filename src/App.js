@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { PLAN, TYPE_COLORS, DAY_NAMES, DAY_NAMES_FULL } from './planData';
 import { supabase } from './supabase';
 import Auth from './Auth';
+import { loadUserData, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage } from './db';
 
-const STORAGE_KEY = 'training_log_v1';
-const EDITS_KEY = 'training_edits_v1';
-const PBS_KEY = 'training_pbs_v1';
+//const STORAGE_KEY = 'training_log_v1';
+//const EDITS_KEY = 'training_edits_v1';
+//const PBS_KEY = 'training_pbs_v1';
 
 const STARTING_PBS = {
   run5k:   { label: '5K',            start: '25:46',  current: '25:46',  unit: 'time' },
@@ -39,14 +40,14 @@ function timeDiff(newVal, oldVal) {
   return `-${m}m ${s}s`;
 }
 
-function useStorage(key, initial) {
+/*function useStorage(key, initial) {
   const [val, setVal] = useState(() => {
     try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; }
     catch { return initial; }
   });
   const set = (v) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
   return [val, set];
-}
+}*/
 
 const tc = (type) => TYPE_COLORS[type] || TYPE_COLORS.rest;
 
@@ -675,10 +676,11 @@ function BottomNav({ tab, setTab, onSignOut }) {
 export default function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [tab, setTab] = useState('home');
-  const [log, setLog] = useStorage(STORAGE_KEY, {});
-  const [edits, setEdits] = useStorage(EDITS_KEY, {});
-  const [pbs, setPbs] = useStorage(PBS_KEY, {});
+  const [log, setLogState] = useState({});
+  const [edits, setEditsState] = useState({});
+  const [pbs, setPbsState] = useState({});
   const [planNav, setPlanNav] = useState(null);
 
   useEffect(() => {
@@ -692,34 +694,91 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!session) return;
+    setDataLoading(true);
+    migrateFromLocalStorage().then(() => {
+      return loadUserData();
+    }).then(data => {
+      if (data) {
+        setLogState(data.log);
+        setEditsState(data.edits);
+        setPbsState(data.pbs);
+      }
+      setDataLoading(false);
+    });
+  }, [session]);
+
+  const setLog = async (newLog) => {
+    setLogState(newLog);
+    if (newLog._startDate && newLog._startDate !== log._startDate) {
+      await saveStartDate(newLog._startDate);
+    }
+    for (const [key, val] of Object.entries(newLog)) {
+      if (key.startsWith('_') || key.startsWith('date_') || !val?.done) continue;
+      const [wi, di] = key.split('_').map(Number);
+      if (!isNaN(wi) && !isNaN(di)) await saveSessionLog(wi, di, val);
+    }
+  };
+
+  const setEdits = async (newEdits) => {
+    setEditsState(newEdits);
+    for (const [key, val] of Object.entries(newEdits)) {
+      const [wi, di] = key.split('_').map(Number);
+      if (!isNaN(wi) && !isNaN(di)) {
+        for (const [field, value] of Object.entries(val)) {
+          await saveEdit(wi, di, field, value);
+        }
+      }
+    }
+    for (const key of Object.keys(edits)) {
+      if (!newEdits[key]) {
+        const [wi, di] = key.split('_').map(Number);
+        if (!isNaN(wi) && !isNaN(di)) await deleteEdit(wi, di);
+      }
+    }
+  };
+
+  const setPbs = async (newPbs) => {
+    setPbsState(newPbs);
+    for (const [key, val] of Object.entries(newPbs)) {
+      const startingPB = STARTING_PBS[key];
+      if (startingPB) {
+        await savePB(key, { ...startingPB, ...val });
+      }
+    }
+  };
+
   const goToDay = (week, day) => { setPlanNav({ week, day }); setTab('plan'); };
 
-  if (authLoading) return (
+  if (authLoading || dataLoading) return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ fontSize: 13, color: '#8a8780', fontFamily: "'DM Mono', monospace" }}>Loading...</div>
+      <div style={{ fontSize: 13, color: '#8a8780', fontFamily: "'DM Mono', monospace" }}>
+        {authLoading ? 'Loading...' : 'Syncing your data...'}
+      </div>
     </div>
   );
 
   if (!session) return <Auth />;
 
   return (
-  <div className="app">
-    <div className="app-content">
-      {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} />}
-      {tab === 'plan' && (
-        <PlanScreen
-          key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}
-          initWeek={planNav?.week} initDay={planNav?.day}
-          log={log} setLog={setLog}
-          edits={edits} setEdits={setEdits}
-          pbs={pbs} setPbs={setPbs}
-        />
-      )}
-      {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
+    <div className="app">
+      <div className="app-content">
+        {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} />}
+        {tab === 'plan' && (
+          <PlanScreen
+            key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}
+            initWeek={planNav?.week} initDay={planNav?.day}
+            log={log} setLog={setLog}
+            edits={edits} setEdits={setEdits}
+            pbs={pbs} setPbs={setPbs}
+          />
+        )}
+        {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
+      </div>
+      <div className="app-nav">
+        <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
+      </div>
     </div>
-    <div className="app-nav">
-      <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
-    </div>
-  </div>
-);
+  );
 }
