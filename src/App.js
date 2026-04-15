@@ -213,9 +213,14 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
   );
 }
 
+const EDITABLE_FIELDS = ['distance', 'pace', 'hr', 'duration'];
+
 function TodayCard({ week, day, log, edits, onPress }) {
   const w = PLAN[week];
-  const d = edits[`${week}_${day}`] ? { ...w.days[day], ...edits[`${week}_${day}`] } : w.days[day];
+  const rawEdit = edits[`${week}_${day}`];
+  const d = rawEdit
+    ? { ...w.days[day], ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) }
+    : w.days[day];
   const done = log[`${week}_${day}`]?.done;
   const c = tc(d.type);
   return (
@@ -335,7 +340,12 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
   }, [initWeek, initDay]);
 
   const planDay = PLAN[week].days[day];
-  const sessionData = edits[`${week}_${day}`] ? { ...planDay, ...edits[`${week}_${day}`] } : planDay;
+  // Only allow the known editable fields through — this prevents old/corrupt DB values
+  // (e.g. a stringified `sets` array) from overriding the real plan data.
+  const rawEdit = edits[`${week}_${day}`];
+  const sessionData = rawEdit
+    ? { ...planDay, ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) }
+    : planDay;
   const logEntry = log[`${week}_${day}`] || {};
   const done = logEntry.done;
 
@@ -349,7 +359,9 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
 
   const saveEdit = (field) => {
     const key = `${week}_${day}`;
-    const current = edits[key] || { ...PLAN[week].days[day] };
+    // Only store the fields that were actually edited — never spread the full plan day,
+    // because fields like `sets` (array) corrupt when saved to the DB value column.
+    const current = edits[key] || {};
     setEdits({ ...edits, [key]: { ...current, [field]: editVal } });
     setEditing(null);
   };
@@ -413,7 +425,10 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
             {PLAN[week].summary}
           </div>
           {PLAN[week].days.map((d, di) => {
-            const ed = edits[`${week}_${di}`] ? { ...d, ...edits[`${week}_${di}`] } : d;
+            const rawEdit2 = edits[`${week}_${di}`];
+            const ed = rawEdit2
+              ? { ...d, ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit2[f] != null).map(f => [f, rawEdit2[f]])) }
+              : d;
             const isDone = log[`${week}_${di}`]?.done;
             const dc = tc(d.type);
             return (
