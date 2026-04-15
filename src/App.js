@@ -215,7 +215,7 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
 
 function TodayCard({ week, day, log, edits, onPress }) {
   const w = PLAN[week];
-  const d = edits[`${week}_${day}`] || w.days[day];
+  const d = edits[`${week}_${day}`] ? { ...w.days[day], ...edits[`${week}_${day}`] } : w.days[day];
   const done = log[`${week}_${day}`]?.done;
   const c = tc(d.type);
   return (
@@ -335,7 +335,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
   }, [initWeek, initDay]);
 
   const planDay = PLAN[week].days[day];
-  const sessionData = edits[`${week}_${day}`] || planDay;
+  const sessionData = edits[`${week}_${day}`] ? { ...planDay, ...edits[`${week}_${day}`] } : planDay;
   const logEntry = log[`${week}_${day}`] || {};
   const done = logEntry.done;
 
@@ -413,7 +413,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
             {PLAN[week].summary}
           </div>
           {PLAN[week].days.map((d, di) => {
-            const ed = edits[`${week}_${di}`] || d;
+            const ed = edits[`${week}_${di}`] ? { ...d, ...edits[`${week}_${di}`] } : d;
             const isDone = log[`${week}_${di}`]?.done;
             const dc = tc(d.type);
             return (
