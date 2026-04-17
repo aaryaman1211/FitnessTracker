@@ -766,9 +766,9 @@ export default function App() {
   const handlePlanLoaded = async (planData, planName) => {
     setActivePlanState(planData || null);
     setActivePlanName(planName || '');
-    localStorage.setItem('locked_in_active_plan', planName || '');
     const userId = await getUserId();
     if (userId) {
+      localStorage.setItem(`locked_in_active_plan_${userId}`, planName || '');
       const { error } = await supabase.from('app_settings').upsert({
         user_id: userId,
         active_plan_name: planName || null,
@@ -822,20 +822,22 @@ export default function App() {
         } else if (data.activePlanName) {
           setActivePlanName(data.activePlanName);
           const userId = await getUserId();
-          const { data: planRows, error } = await supabase
+          const { data: allPlans, error } = await supabase
             .from('plans')
             .select('plan_data, name')
-            .eq('user_id', userId)
-            .eq('name', data.activePlanName)
-            .order('created_at', { ascending: false })
-            .limit(1);
+            .eq('user_id', userId);
           
           if (error) {
              setActivePlanName(data.activePlanName + ' (DB Error)');
-          } else if (planRows && planRows.length > 0) {
-            setActivePlanState(planRows[0].plan_data);
+          } else if (allPlans && allPlans.length > 0) {
+            const match = allPlans.find(p => p.name.trim() === data.activePlanName.trim());
+            if (match) {
+              setActivePlanState(match.plan_data);
+            } else {
+              setActivePlanName(data.activePlanName + ' (Name Mismatch)');
+            }
           } else {
-             setActivePlanName(data.activePlanName + ' (Not Found in DB)');
+             setActivePlanName(data.activePlanName + ' (No plans found)');
           }
         }
         // New user with no plan and no logs → send straight to Plans tab
