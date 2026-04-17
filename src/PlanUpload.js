@@ -97,45 +97,42 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, 
     const planName = currentPlanName || 'Default 8-week plan';
     const EDITABLE_FIELDS = ['distance', 'pace', 'hr', 'duration'];
 
-    // Merge edits into the plan structure
-    const planWithEdits = planToExport.map((week, wi) => ({
+    // Build enriched plan: merge edits + logged session data into each day
+    const planWithData = planToExport.map((week, wi) => ({
       ...week,
       days: week.days.map((day, di) => {
         const rawEdit = (edits || {})[`${wi}_${di}`];
-        if (!rawEdit) return day;
-        return { ...day, ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) };
+        const logEntry = (log || {})[`${wi}_${di}`];
+
+        // Apply manual field edits
+        let mergedDay = rawEdit
+          ? { ...day, ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) }
+          : { ...day };
+
+        // Attach actual logged session data if the session was completed
+        if (logEntry?.done) {
+          mergedDay._logged = {
+            completedOn: logEntry.date || null,
+            actualPace: logEntry.pace || null,
+            avgHR: logEntry.hr || null,
+            notes: logEntry.notes || null,
+            pb5k: logEntry.pb5k || null,
+            pb10k: logEntry.pb10k || null,
+            pbHalf: logEntry.pbHalf || null,
+            pbSwim100: logEntry.pbSwim100 || null,
+            pbSwim400: logEntry.pbSwim400 || null,
+            pbSwim1100: logEntry.pbSwim1100 || null,
+          };
+        }
+
+        return mergedDay;
       }),
     }));
-
-    // Build session log list enriched with week/day labels
-    const sessionLogs = {};
-    Object.entries(log || {}).forEach(([key, val]) => {
-      if (key.startsWith('_') || key.startsWith('date_') || !val?.done) return;
-      const [wi, di] = key.split('_').map(Number);
-      const dayTitle = planToExport[wi]?.days[di]?.title || key;
-      sessionLogs[key] = {
-        week: wi + 1,
-        day: di + 1,
-        title: dayTitle,
-        date: val.date,
-        pace: val.pace || null,
-        hr: val.hr || null,
-        notes: val.notes || null,
-        pb5k: val.pb5k || null,
-        pb10k: val.pb10k || null,
-        pbHalf: val.pbHalf || null,
-        pbSwim100: val.pbSwim100 || null,
-        pbSwim400: val.pbSwim400 || null,
-        pbSwim1100: val.pbSwim1100 || null,
-      };
-    });
 
     const exportData = {
       planName,
       exportedAt: new Date().toISOString(),
-      plan: planWithEdits,
-      sessionLogs,
-      edits: edits || {},
+      plan: planWithData,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });

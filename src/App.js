@@ -659,13 +659,57 @@ function StatsScreen({ log, pbs }) {
   );
 }
 
-function BottomNav({ tab, setTab, onSignOut }) {
+function AccountScreen({ session, onSignOut }) {
+  const email = session?.user?.email || '';
+  const fullName = session?.user?.user_metadata?.full_name || '';
+  const displayName = fullName || email.split('@')[0];
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const createdAt = session?.user?.created_at
+    ? new Date(session.user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+
+  return (
+    <div style={{ padding: '0 20px 40px' }}>
+      <div style={{ paddingTop: 'calc(var(--safe-top) + 24px)', marginBottom: 28 }}>
+        <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' }}>Account</h2>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px', marginBottom: 20 }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #e8583a, #e8a83a)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 20, fontWeight: 800, color: '#fff', flexShrink: 0,
+        }}>{initials}</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 3 }}>{displayName}</div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
+          {createdAt && <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>Member since {createdAt}</div>}
+        </div>
+      </div>
+
+      <button
+        onClick={onSignOut}
+        style={{
+          width: '100%', padding: '14px', borderRadius: 12,
+          background: 'transparent', border: '1px solid rgba(232,88,58,0.35)',
+          color: '#e8583a', fontSize: 14, fontWeight: 600,
+          cursor: 'pointer', fontFamily: 'var(--font-display)',
+        }}>
+        Sign out
+      </button>
+    </div>
+  );
+}
+
+function BottomNav({ tab, setTab }) {
   const items = [
-  { id: 'home', label: 'Home', icon: '⌂' },
-  { id: 'plan', label: 'Plan', icon: '◫' },
-  { id: 'stats', label: 'Progress', icon: '↗' },
-  { id: 'plans', label: 'Plans', icon: '↑' },
-];
+    { id: 'home', label: 'Home', icon: '⌂' },
+    { id: 'plan', label: 'Plan', icon: '◫' },
+    { id: 'stats', label: 'Progress', icon: '↗' },
+    { id: 'plans', label: 'Plans', icon: '↑' },
+    { id: 'account', label: 'Account', icon: '◯' },
+  ];
   return (
     <div style={{
       display: 'flex', background: 'var(--bg2)',
@@ -681,13 +725,6 @@ function BottomNav({ tab, setTab, onSignOut }) {
           <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: tab === item.id ? '#e8583a' : 'var(--text3)', letterSpacing: '0.04em' }}>{item.label.toUpperCase()}</span>
         </button>
       ))}
-      <button onClick={onSignOut} style={{
-        flex: 1, padding: '12px 0 10px', background: 'transparent', border: 'none', cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-      }}>
-        <span style={{ fontSize: 20, lineHeight: 1, color: 'var(--text3)' }}>⇥</span>
-        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text3)', letterSpacing: '0.04em' }}>OUT</span>
-      </button>
     </div>
   );
 }
@@ -859,9 +896,12 @@ export default function App() {
       edits={edits}
     />
   )}
+  {tab === 'account' && (
+    <AccountScreen session={session} onSignOut={() => supabase.auth.signOut()} />
+  )}
 </div>
       <div className="app-nav">
-        <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
+        <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} />
       </div>
     </div>
   );
