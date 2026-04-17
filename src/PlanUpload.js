@@ -31,11 +31,20 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
     try {
       const text = await file.text();
 
-      // Extract the PLAN array from the JS file
-      const planMatch = text.match(/export\s+const\s+PLAN\s*=\s*(\[[\s\S]*?\]);/);
-      if (!planMatch) throw new Error('Could not find PLAN export in file. Make sure it uses: export const PLAN = [...]');
+      // Extract the PLAN array from the JS file using bracket counting
+      // (non-greedy `.*?` breaks on nested arrays, so we count brackets manually)
+      const startIdx = text.search(/export\s+const\s+PLAN\s*=\s*\[/);
+      if (startIdx === -1) throw new Error('Could not find PLAN export in file. Make sure it uses: export const PLAN = [...]');
+      const arrayStart = text.indexOf('[', startIdx);
+      let depth = 0, arrayEnd = -1;
+      for (let i = arrayStart; i < text.length; i++) {
+        if (text[i] === '[') depth++;
+        else if (text[i] === ']') { depth--; if (depth === 0) { arrayEnd = i; break; } }
+      }
+      if (arrayEnd === -1) throw new Error('PLAN array is not properly closed — check your file has matching brackets');
+      const planRaw = text.slice(arrayStart, arrayEnd + 1);
 
-      const planData = eval('(' + planMatch[1] + ')');
+      const planData = eval('(' + planRaw + ')');
       if (!Array.isArray(planData) || planData.length === 0) throw new Error('PLAN must be a non-empty array');
       if (!planData[0].days || !planData[0].phase) throw new Error('Invalid plan format — each week needs phase and days');
 
@@ -96,7 +105,7 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
         </div>
         <label style={{ display: 'block', padding: '13px', borderRadius: 10, background: uploading ? 'rgba(232,88,58,0.1)' : '#e8583a', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', cursor: 'pointer' }}>
           {uploading ? 'Uploading...' : 'Choose planData.js file'}
-          <input type="file" accept=".js" onChange={handleFileUpload} style={{ display: 'none' }} disabled={uploading} />
+          <input type="file" accept=".js,.txt,text/javascript,application/javascript,*" onChange={handleFileUpload} style={{ display: 'none' }} disabled={uploading} />
         </label>
         {error && <div style={{ fontSize: 12, color: '#e8583a', marginTop: 10, fontFamily: 'var(--font-mono)', lineHeight: 1.5 }}>{error}</div>}
         {success && <div style={{ fontSize: 12, color: '#5ac47a', marginTop: 10, fontFamily: 'var(--font-mono)' }}>{success}</div>}
