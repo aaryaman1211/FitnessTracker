@@ -123,7 +123,7 @@ function PBModal({ pbs: newPBs, onConfirm, onDismiss }) {
   );
 }
 
-function HomeScreen({ log, setLog, edits, onOpenDay, activePlan }) {
+function HomeScreen({ log, setLog, edits, onOpenDay, activePlan, userName }) {
   const currentPlan = activePlan || PLAN;
   const today = new Date();
   const totalSessions = currentPlan.reduce((a, w) => a + w.days.filter(d => d.type !== 'rest').length, 0);
@@ -154,7 +154,7 @@ function HomeScreen({ log, setLog, edits, onOpenDay, activePlan }) {
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
         </div>
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-          Aaryaman's<br />Training Plan
+          {userName ? `${userName}'s` : 'Your'}<br />Training Plan
         </h1>
       </div>
 
@@ -768,6 +768,11 @@ export default function App() {
             setActivePlanState(planRow.plan_data);
           }
         }
+        // New user with no plan and no logs → send straight to Plans tab
+        const hasLogs = Object.keys(data.log).some(k => !k.startsWith('_') && !k.startsWith('date_'));
+        if (!data.activePlanName && !hasLogs) {
+          setTab('plans');
+        }
       }
     })
     .catch(err => console.error('Data load error:', err))
@@ -833,7 +838,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="app-content">
-  {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} activePlan={activePlan} />}
+  {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} activePlan={activePlan} userName={session?.user?.user_metadata?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0]} />}
   {tab === 'plan' && (
     <PlanScreen
       key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}
@@ -850,6 +855,8 @@ export default function App() {
       onPlanLoaded={handlePlanLoaded}
       currentPlanName={activePlanName}
       activePlan={activePlan}
+      log={log}
+      edits={edits}
     />
   )}
 </div>

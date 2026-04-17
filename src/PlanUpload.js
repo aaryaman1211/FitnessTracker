@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { getUserId } from './db';
 import { PLAN } from './planData';
 
-export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan }) {
+export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, log, edits }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -95,16 +95,57 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan }
   const exportPlan = () => {
     const planToExport = activePlan || PLAN;
     const planName = currentPlanName || 'Default 8-week plan';
-    const json = JSON.stringify(planToExport, null, 2);
-    const fileContent = `export const PLAN = ${json};\n`;
-    const blob = new Blob([fileContent], { type: 'text/javascript' });
+    const EDITABLE_FIELDS = ['distance', 'pace', 'hr', 'duration'];
+
+    // Merge edits into the plan structure
+    const planWithEdits = planToExport.map((week, wi) => ({
+      ...week,
+      days: week.days.map((day, di) => {
+        const rawEdit = (edits || {})[`${wi}_${di}`];
+        if (!rawEdit) return day;
+        return { ...day, ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) };
+      }),
+    }));
+
+    // Build session log list enriched with week/day labels
+    const sessionLogs = {};
+    Object.entries(log || {}).forEach(([key, val]) => {
+      if (key.startsWith('_') || key.startsWith('date_') || !val?.done) return;
+      const [wi, di] = key.split('_').map(Number);
+      const dayTitle = planToExport[wi]?.days[di]?.title || key;
+      sessionLogs[key] = {
+        week: wi + 1,
+        day: di + 1,
+        title: dayTitle,
+        date: val.date,
+        pace: val.pace || null,
+        hr: val.hr || null,
+        notes: val.notes || null,
+        pb5k: val.pb5k || null,
+        pb10k: val.pb10k || null,
+        pbHalf: val.pbHalf || null,
+        pbSwim100: val.pbSwim100 || null,
+        pbSwim400: val.pbSwim400 || null,
+        pbSwim1100: val.pbSwim1100 || null,
+      };
+    });
+
+    const exportData = {
+      planName,
+      exportedAt: new Date().toISOString(),
+      plan: planWithEdits,
+      sessionLogs,
+      edits: edits || {},
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `planData_${planName.replace(/[^a-z0-9]/gi, '_')}.js`;
+    a.download = `training_export_${planName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setSuccess('Plan exported!');
+    setSuccess('Data exported!');
   };
 
   const inputStyle = { width: '100%', padding: '11px 12px', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 10, color: 'var(--text)', fontSize: 14 };
