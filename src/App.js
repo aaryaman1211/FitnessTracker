@@ -123,8 +123,24 @@ function PBModal({ pbs: newPBs, onConfirm, onDismiss }) {
   );
 }
 
-function HomeScreen({ log, setLog, edits, onOpenDay, activePlan, userName }) {
-  const currentPlan = activePlan || PLAN;
+function HomeScreen({ log, setLog, edits, onOpenDay, activePlan, userName, setTab }) {
+  const currentPlan = activePlan;
+
+  if (!currentPlan) {
+    return (
+      <div style={{ padding: '0 20px 40px', textAlign: 'center', paddingTop: 'calc(var(--safe-top) + 120px)' }}>
+        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, letterSpacing: '-0.02em' }}>Welcome.</h2>
+        <p style={{ fontSize: 15, color: 'var(--text2)', marginBottom: 32, lineHeight: 1.5 }}>
+          You don't have a training plan active.<br/>Head to the Plans tab to upload one<br/>or pick the default 8-week plan.
+        </p>
+        <button onClick={() => setTab('plans')} 
+                style={{ padding: '14px 28px', background: '#e8583a', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+          Go to Plans
+        </button>
+      </div>
+    );
+  }
+
   const today = new Date();
   const totalSessions = currentPlan.reduce((a, w) => a + w.days.filter(d => d.type !== 'rest').length, 0);
   const completedCount = Object.values(log).filter(v => v && v.done).length;
@@ -218,7 +234,8 @@ function HomeScreen({ log, setLog, edits, onOpenDay, activePlan, userName }) {
 const EDITABLE_FIELDS = ['distance', 'pace', 'hr', 'duration'];
 
 function TodayCard({ week, day, log, edits, onPress, activePlan }) {
-  const w = (activePlan || PLAN)[week];
+  if (!activePlan) return null;
+  const w = activePlan[week];
   const rawEdit = edits[`${week}_${day}`];
   const d = rawEdit
     ? { ...w.days[day], ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) }
@@ -329,8 +346,13 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
 }
 
 function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setPbs, activePlan }) {
-  const currentPlan = activePlan || PLAN;
-  const [week, setWeek] = useState(initWeek || 0);
+  const currentPlan = activePlan;
+
+  if (!currentPlan) {
+    return <div style={{ padding: 'calc(var(--safe-top) + 80px) 20px', textAlign: 'center', color: 'var(--text2)' }}>No training plan selected.</div>;
+  }
+
+  const [week, setWeek] = useState(initWeek != null ? initWeek : 0);
   const [day, setDay] = useState(initDay || 0);
   const [view, setView] = useState('week');
   const [editing, setEditing] = useState(null);
@@ -417,7 +439,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{PLAN[week].phase} <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 400 }}>· Week {week + 1}</span></div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{currentPlan[week].phase} <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 400 }}>· Week {week + 1}</span></div>
           {view === 'day' && <button onClick={() => setView('week')} style={{ fontSize: 11, color: 'var(--text2)', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>← Week</button>}
         </div>
       </div>
@@ -792,17 +814,21 @@ export default function App() {
             });
         }
         // Load active plan by name if one was saved
-        if (data.activePlanName) {
+        if (data.activePlanName === 'Default 8-week plan') {
+          setActivePlanName('Default 8-week plan');
+          setActivePlanState(PLAN);
+        } else if (data.activePlanName) {
           setActivePlanName(data.activePlanName);
           const userId = await getUserId();
-          const { data: planRow } = await supabase
+          const { data: planRows } = await supabase
             .from('plans')
             .select('plan_data, name')
             .eq('user_id', userId)
             .eq('name', data.activePlanName)
-            .single();
-          if (planRow) {
-            setActivePlanState(planRow.plan_data);
+            .order('created_at', { ascending: false })
+            .limit(1);
+          if (planRows && planRows.length > 0) {
+            setActivePlanState(planRows[0].plan_data);
           }
         }
         // New user with no plan and no logs → send straight to Plans tab
@@ -875,7 +901,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="app-content">
-  {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} activePlan={activePlan} userName={session?.user?.user_metadata?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0]} />}
+  {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} activePlan={activePlan} userName={session?.user?.user_metadata?.full_name?.split(' ')[0] || session?.user?.email?.split('@')[0]} setTab={setTab} />}
   {tab === 'plan' && (
     <PlanScreen
       key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}

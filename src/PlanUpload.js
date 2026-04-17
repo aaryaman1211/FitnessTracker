@@ -88,7 +88,7 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, 
   };
 
   const resetToDefault = async () => {
-    onPlanLoaded(null, '');
+    onPlanLoaded(PLAN, 'Default 8-week plan');
     setSuccess('Switched back to the default 8-week plan');
   };
 
@@ -157,7 +157,7 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, 
       </div>
 
       {/* Reset to default */}
-      {currentPlanName && (
+      {currentPlanName !== 'Default 8-week plan' && (
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Default 8-week plan</div>
