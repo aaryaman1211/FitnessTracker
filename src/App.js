@@ -693,7 +693,7 @@ function BottomNav({ tab, setTab, onSignOut }) {
 export default function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [tab, setTab] = useState('home');
   const [log, setLogState] = useState({});
   const [edits, setEditsState] = useState({});
@@ -727,7 +727,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-  if (!session) return;
+  if (!session) {
+    setDataLoading(false);
+    return;
+  }
   setDataLoading(true);
   const timeout = setTimeout(() => {
     setDataLoading(false);
