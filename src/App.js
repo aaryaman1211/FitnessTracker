@@ -764,17 +764,19 @@ export default function App() {
   const [activePlanName, setActivePlanName] = useState('');
 
   const handlePlanLoaded = async (planData, planName) => {
-  setActivePlanState(planData || null);
-  setActivePlanName(planName || '');
-  const userId = await getUserId();
-  if (userId) {
-    await supabase.from('app_settings').upsert({
-      user_id: userId,
-      active_plan_name: planName || null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
-  }
-};
+    setActivePlanState(planData || null);
+    setActivePlanName(planName || '');
+    localStorage.setItem('locked_in_active_plan', planName || '');
+    const userId = await getUserId();
+    if (userId) {
+      const { error } = await supabase.from('app_settings').upsert({
+        user_id: userId,
+        active_plan_name: planName || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+      if (error) console.error('Failed to save to app_settings (do you need to add the active_plan_name column?):', error);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

@@ -10,7 +10,7 @@ export async function loadUserData() {
   if (!userId) return null;
 
   const [settings, logs, pbs, edits] = await Promise.all([
-    supabase.from('app_settings').select('*').eq('user_id', userId).single(),
+    supabase.from('app_settings').select('*').eq('user_id', userId).maybeSingle(),
     supabase.from('session_logs').select('*').eq('user_id', userId),
     supabase.from('personal_bests').select('*').eq('user_id', userId),
     supabase.from('session_edits').select('*').eq('user_id', userId),
@@ -18,7 +18,7 @@ export async function loadUserData() {
 
   const log = {};
   if (settings.data?.start_date) log._startDate = settings.data.start_date;
-  const activePlanName = settings.data?.active_plan_name || null;
+  const activePlanName = settings.data?.active_plan_name || localStorage.getItem('locked_in_active_plan') || null;
   (logs.data || []).forEach(row => {
     const key = `${row.week_index}_${row.day_index}`;
     log[key] = {
