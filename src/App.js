@@ -822,15 +822,20 @@ export default function App() {
         } else if (data.activePlanName) {
           setActivePlanName(data.activePlanName);
           const userId = await getUserId();
-          const { data: planRows } = await supabase
+          const { data: planRows, error } = await supabase
             .from('plans')
             .select('plan_data, name')
             .eq('user_id', userId)
             .eq('name', data.activePlanName)
             .order('created_at', { ascending: false })
             .limit(1);
-          if (planRows && planRows.length > 0) {
+          
+          if (error) {
+             setActivePlanName(data.activePlanName + ' (DB Error)');
+          } else if (planRows && planRows.length > 0) {
             setActivePlanState(planRows[0].plan_data);
+          } else {
+             setActivePlanName(data.activePlanName + ' (Not Found in DB)');
           }
         }
         // New user with no plan and no logs → send straight to Plans tab
