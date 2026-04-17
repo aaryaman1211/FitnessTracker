@@ -105,11 +105,24 @@ export async function migrateFromLocalStorage() {
   const userId = await getUserId();
   if (!userId) return;
 
+  // Check if localStorage even has any completed sessions — if not, nothing to migrate
+  const rawLog = localStorage.getItem('training_log_v1');
+  if (!rawLog) return;
+  const localLog = JSON.parse(rawLog);
+  const hasRealData = Object.keys(localLog).some(k => !k.startsWith('_') && !k.startsWith('date_'));
+  if (!hasRealData) return;
+
+  // If user already has DB data, just clear stale localStorage so it doesn't
+  // accidentally migrate to a different user on this same device in the future.
   const existing = await supabase.from('session_logs').select('id').eq('user_id', userId).limit(1);
-  if (existing.data?.length > 0) return;
+  if (existing.data?.length > 0) {
+    localStorage.removeItem('training_log_v1');
+    localStorage.removeItem('training_pbs_v1');
+    localStorage.removeItem('training_edits_v1');
+    return;
+  }
 
   try {
-    const localLog = JSON.parse(localStorage.getItem('training_log_v1') || '{}');
     const localPbs = JSON.parse(localStorage.getItem('training_pbs_v1') || '{}');
     const localEdits = JSON.parse(localStorage.getItem('training_edits_v1') || '{}');
 
@@ -135,6 +148,12 @@ export async function migrateFromLocalStorage() {
     }
 
     console.log('Migration complete');
+
+    // Clear localStorage now that data is safely in Supabase,
+    // so this device never migrates stale data to a different user.
+    localStorage.removeItem('training_log_v1');
+    localStorage.removeItem('training_pbs_v1');
+    localStorage.removeItem('training_edits_v1');
   } catch (e) {
     console.error('Migration failed', e);
   }
