@@ -705,13 +705,13 @@ export default function App() {
   const [activePlanName, setActivePlanName] = useState('');
 
   const handlePlanLoaded = async (planData, planName) => {
-  setActivePlanState(planData);
-  setActivePlanName(planName);
+  setActivePlanState(planData || null);
+  setActivePlanName(planName || '');
   const userId = await getUserId();
   if (userId) {
     await supabase.from('app_settings').upsert({
       user_id: userId,
-      active_plan_name: planName,
+      active_plan_name: planName || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
   }
@@ -849,6 +849,7 @@ export default function App() {
     <PlanUpload
       onPlanLoaded={handlePlanLoaded}
       currentPlanName={activePlanName}
+      activePlan={activePlan}
     />
   )}
 </div>

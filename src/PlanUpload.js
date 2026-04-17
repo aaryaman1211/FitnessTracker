@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { getUserId } from './db';
+import { PLAN } from './planData';
 
-export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
+export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -86,6 +87,26 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
     await loadSavedPlans();
   };
 
+  const resetToDefault = async () => {
+    onPlanLoaded(null, '');
+    setSuccess('Switched back to the default 8-week plan');
+  };
+
+  const exportPlan = () => {
+    const planToExport = activePlan || PLAN;
+    const planName = currentPlanName || 'Default 8-week plan';
+    const json = JSON.stringify(planToExport, null, 2);
+    const fileContent = `export const PLAN = ${json};\n`;
+    const blob = new Blob([fileContent], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `planData_${planName.replace(/[^a-z0-9]/gi, '_')}.js`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setSuccess('Plan exported!');
+  };
+
   const inputStyle = { width: '100%', padding: '11px 12px', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 10, color: 'var(--text)', fontSize: 14 };
 
   return (
@@ -95,6 +116,32 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
         <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 6 }}>
           Active: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{currentPlanName || 'Default 8-week plan'}</span>
         </div>
+      </div>
+
+      {/* Reset to default */}
+      {currentPlanName && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Default 8-week plan</div>
+            <div style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>Built-in · always available</div>
+          </div>
+          <button onClick={resetToDefault} style={{ padding: '7px 14px', background: 'rgba(232,88,58,0.12)', border: '1px solid rgba(232,88,58,0.35)', borderRadius: 8, color: '#e8583a', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            Use this
+          </button>
+        </div>
+      )}
+
+      {/* Export current plan */}
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Export current plan</div>
+          <div style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--font-mono)', lineHeight: 1.5 }}>
+            Download as <span style={{ color: 'var(--text)' }}>planData.js</span> — edit and re-upload
+          </div>
+        </div>
+        <button onClick={exportPlan} style={{ padding: '7px 14px', background: 'rgba(90,196,122,0.12)', border: '1px solid rgba(90,196,122,0.35)', borderRadius: 8, color: '#5ac47a', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          Export ↓
+        </button>
       </div>
 
       {/* Upload section */}
@@ -117,9 +164,12 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
           <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 10 }}>SAVED PLANS</div>
           {savedPlans.map(plan => (
             <div key={plan.id} onClick={() => loadPlan(plan)}
-              style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+              style={{ background: plan.name === currentPlanName ? 'rgba(232,88,58,0.07)' : 'var(--bg2)', border: `1px solid ${plan.name === currentPlanName ? 'rgba(232,88,58,0.35)' : 'var(--border)'}`, borderRadius: 12, padding: '14px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{plan.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {plan.name}
+                  {plan.name === currentPlanName && <span style={{ fontSize: 9, color: '#e8583a', fontFamily: 'var(--font-mono)', background: 'rgba(232,88,58,0.15)', padding: '2px 6px', borderRadius: 4 }}>ACTIVE</span>}
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
                   {new Date(plan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
@@ -132,14 +182,6 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName }) {
           ))}
         </>
       )}
-
-      {/* Download default plan template */}
-      <div style={{ marginTop: 24, padding: '14px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Need a template?</div>
-        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
-          Your current plan file is in <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>src/planData.js</span>. Copy it, rename it, edit the weeks and sessions, then upload it here.
-        </div>
-      </div>
     </div>
   );
 }
