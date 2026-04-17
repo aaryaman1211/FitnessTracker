@@ -18,6 +18,7 @@ export async function loadUserData() {
 
   const log = {};
   if (settings.data?.start_date) log._startDate = settings.data.start_date;
+  const activePlanName = settings.data?.active_plan_name || null;
   (logs.data || []).forEach(row => {
     const key = `${row.week_index}_${row.day_index}`;
     log[key] = {
@@ -41,7 +42,7 @@ export async function loadUserData() {
     editsObj[key][row.field] = row.value;
   });
 
-  return { log, pbs: pbsObj, edits: editsObj };
+  return { log, pbs: pbsObj, edits: editsObj, activePlanName };
 }
 
 export async function saveSessionLog(weekIndex, dayIndex, data) {

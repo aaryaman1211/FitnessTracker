@@ -123,9 +123,10 @@ function PBModal({ pbs: newPBs, onConfirm, onDismiss }) {
   );
 }
 
-function HomeScreen({ log, setLog, edits, onOpenDay }) {
+function HomeScreen({ log, setLog, edits, onOpenDay, activePlan }) {
+  const currentPlan = activePlan || PLAN;
   const today = new Date();
-  const totalSessions = PLAN.reduce((a, w) => a + w.days.filter(d => d.type !== 'rest').length, 0);
+  const totalSessions = currentPlan.reduce((a, w) => a + w.days.filter(d => d.type !== 'rest').length, 0);
   const completedCount = Object.values(log).filter(v => v && v.done).length;
   const pct = Math.round((completedCount / totalSessions) * 100);
   const startDate = log._startDate ? new Date(log._startDate) : null;
@@ -188,12 +189,12 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
       {startDate && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 8 }}>TODAY'S SESSION</div>
-          <TodayCard week={suggestWeek} day={suggestDay} log={log} edits={edits} onPress={() => onOpenDay(suggestWeek, suggestDay)} />
+          <TodayCard week={suggestWeek} day={suggestDay} log={log} edits={edits} onPress={() => onOpenDay(suggestWeek, suggestDay)} activePlan={activePlan} />
         </div>
       )}
 
       <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em', marginBottom: 8 }}>ALL WEEKS</div>
-      {PLAN.map((week, wi) => {
+      {currentPlan.map((week, wi) => {
         const weekDone = week.days.filter((d, di) => d.type !== 'rest' && log[`${wi}_${di}`]?.done).length;
         const weekTotal = week.days.filter(d => d.type !== 'rest').length;
         return (
@@ -216,8 +217,8 @@ function HomeScreen({ log, setLog, edits, onOpenDay }) {
 
 const EDITABLE_FIELDS = ['distance', 'pace', 'hr', 'duration'];
 
-function TodayCard({ week, day, log, edits, onPress }) {
-  const w = PLAN[week];
+function TodayCard({ week, day, log, edits, onPress, activePlan }) {
+  const w = (activePlan || PLAN)[week];
   const rawEdit = edits[`${week}_${day}`];
   const d = rawEdit
     ? { ...w.days[day], ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit[f] != null).map(f => [f, rawEdit[f]])) }
@@ -327,7 +328,8 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
   );
 }
 
-function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setPbs }) {
+function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setPbs, activePlan }) {
+  const currentPlan = activePlan || PLAN;
   const [week, setWeek] = useState(initWeek || 0);
   const [day, setDay] = useState(initDay || 0);
   const [view, setView] = useState('week');
@@ -340,7 +342,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
     if (initWeek !== undefined) { setWeek(initWeek); setDay(initDay || 0); setView('day'); }
   }, [initWeek, initDay]);
 
-  const planDay = PLAN[week].days[day];
+  const planDay = currentPlan[week].days[day];
   // Only allow the known editable fields through — this prevents old/corrupt DB values
   // (e.g. a stringified `sets` array) from overriding the real plan data.
   const rawEdit = edits[`${week}_${day}`];
@@ -407,7 +409,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
 
       <div style={{ padding: '16px 20px 0', paddingTop: 'calc(var(--safe-top) + 16px)' }}>
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 12, scrollbarWidth: 'none' }}>
-          {PLAN.map((w, wi) => (
+          {currentPlan.map((w, wi) => (
             <button key={wi} onClick={() => { setWeek(wi); setDay(0); setView('week'); }}
               style={{ flexShrink: 0, padding: '5px 12px', borderRadius: 20, border: wi === week ? '1.5px solid #e8583a' : '1px solid var(--border)', background: wi === week ? 'rgba(232,88,58,0.15)' : 'transparent', color: wi === week ? '#e8583a' : 'var(--text2)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
               W{wi + 1}
@@ -423,9 +425,9 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
       {view === 'week' ? (
         <div style={{ padding: '0 20px 40px' }}>
           <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 16, padding: '12px', background: 'var(--bg2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-            {PLAN[week].summary}
+            {currentPlan[week].summary}
           </div>
-          {PLAN[week].days.map((d, di) => {
+          {currentPlan[week].days.map((d, di) => {
             const rawEdit2 = edits[`${week}_${di}`];
             const ed = rawEdit2
               ? { ...d, ...Object.fromEntries(EDITABLE_FIELDS.filter(f => rawEdit2[f] != null).map(f => [f, rawEdit2[f]])) }
@@ -737,11 +739,35 @@ export default function App() {
   }, 8000);
   migrateFromLocalStorage()
     .then(() => loadUserData())
-    .then(data => {
+    .then(async data => {
       if (data) {
         setLogState(data.log);
         setEditsState(data.edits);
         setPbsState(data.pbs);
+        // Load active plan by ID if one was saved
+        if (data.activePlanId) {
+          supabase.from('plans').select('plan_data, name').eq('id', data.activePlanId).single()
+            .then(({ data: planData }) => {
+              if (planData) {
+                setActivePlanState(planData.plan_data);
+                setActivePlanName(planData.name);
+              }
+            });
+        }
+        // Load active plan by name if one was saved
+        if (data.activePlanName) {
+          setActivePlanName(data.activePlanName);
+          const userId = await getUserId();
+          const { data: planRow } = await supabase
+            .from('plans')
+            .select('plan_data, name')
+            .eq('user_id', userId)
+            .eq('name', data.activePlanName)
+            .single();
+          if (planRow) {
+            setActivePlanState(planRow.plan_data);
+          }
+        }
       }
     })
     .catch(err => console.error('Data load error:', err))
@@ -807,24 +833,25 @@ export default function App() {
   return (
     <div className="app">
       <div className="app-content">
-        {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} />}
-        {tab === 'plan' && (
-          <PlanScreen
-            key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}
-            initWeek={planNav?.week} initDay={planNav?.day}
-            log={log} setLog={setLog}
-            edits={edits} setEdits={setEdits}
-            pbs={pbs} setPbs={setPbs}
-          />
-        )}
-        {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
-        {tab === 'plans' && (
-  <PlanUpload
-    onPlanLoaded={handlePlanLoaded}
-    currentPlanName={activePlanName}
-  />
-)}
-      </div>
+  {tab === 'home' && <HomeScreen log={log} setLog={setLog} edits={edits} onOpenDay={goToDay} activePlan={activePlan} />}
+  {tab === 'plan' && (
+    <PlanScreen
+      key={planNav ? `${planNav.week}_${planNav.day}` : 'default'}
+      initWeek={planNav?.week} initDay={planNav?.day}
+      log={log} setLog={setLog}
+      edits={edits} setEdits={setEdits}
+      pbs={pbs} setPbs={setPbs}
+      activePlan={activePlan}
+    />
+  )}
+  {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
+  {tab === 'plans' && (
+    <PlanUpload
+      onPlanLoaded={handlePlanLoaded}
+      currentPlanName={activePlanName}
+    />
+  )}
+</div>
       <div className="app-nav">
         <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
       </div>
