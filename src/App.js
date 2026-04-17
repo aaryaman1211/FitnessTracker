@@ -727,19 +727,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!session) return;
-    setDataLoading(true);
-    migrateFromLocalStorage().then(() => {
-      return loadUserData();
-    }).then(data => {
+  if (!session) return;
+  setDataLoading(true);
+  const timeout = setTimeout(() => {
+    setDataLoading(false);
+  }, 8000);
+  migrateFromLocalStorage()
+    .then(() => loadUserData())
+    .then(data => {
       if (data) {
         setLogState(data.log);
         setEditsState(data.edits);
         setPbsState(data.pbs);
       }
+    })
+    .catch(err => console.error('Data load error:', err))
+    .finally(() => {
+      clearTimeout(timeout);
       setDataLoading(false);
     });
-  }, [session]);
+  return () => clearTimeout(timeout);
+}, [session]);
 
   const setLog = async (newLog) => {
     setLogState(newLog);
