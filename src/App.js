@@ -3,6 +3,7 @@ import { PLAN, TYPE_COLORS, DAY_NAMES, DAY_NAMES_FULL } from './planData';
 import { supabase } from './supabase';
 import Auth from './Auth';
 import { loadUserData, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage } from './db';
+import PlanUpload from './PlanUpload';
 
 //const STORAGE_KEY = 'training_log_v1';
 //const EDITS_KEY = 'training_edits_v1';
@@ -658,10 +659,11 @@ function StatsScreen({ log, pbs }) {
 
 function BottomNav({ tab, setTab, onSignOut }) {
   const items = [
-    { id: 'home', label: 'Home', icon: '⌂' },
-    { id: 'plan', label: 'Plan', icon: '◫' },
-    { id: 'stats', label: 'Progress', icon: '↗' },
-  ];
+  { id: 'home', label: 'Home', icon: '⌂' },
+  { id: 'plan', label: 'Plan', icon: '◫' },
+  { id: 'stats', label: 'Progress', icon: '↗' },
+  { id: 'plans', label: 'Plans', icon: '↑' },
+];
   return (
     <div style={{
       display: 'flex', background: 'var(--bg2)',
@@ -697,6 +699,21 @@ export default function App() {
   const [edits, setEditsState] = useState({});
   const [pbs, setPbsState] = useState({});
   const [planNav, setPlanNav] = useState(null);
+  const [activePlan, setActivePlanState] = useState(null);
+  const [activePlanName, setActivePlanName] = useState('');
+
+  const handlePlanLoaded = async (planData, planName) => {
+  setActivePlanState(planData);
+  setActivePlanName(planName);
+  const userId = await getUserId();
+  if (userId) {
+    await supabase.from('app_settings').upsert({
+      user_id: userId,
+      active_plan_name: planName,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  }
+};
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -790,6 +807,12 @@ export default function App() {
           />
         )}
         {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
+        {tab === 'plans' && (
+  <PlanUpload
+    onPlanLoaded={handlePlanLoaded}
+    currentPlanName={activePlanName}
+  />
+)}
       </div>
       <div className="app-nav">
         <BottomNav tab={tab} setTab={(t) => { if (t !== 'plan') setPlanNav(null); setTab(t); }} onSignOut={() => supabase.auth.signOut()} />
