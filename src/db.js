@@ -9,16 +9,20 @@ export async function loadUserData() {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const [settings, logs, pbs, edits] = await Promise.all([
+  const [settings, logs, pbs, edits, plans] = await Promise.all([
     supabase.from('app_settings').select('*').eq('user_id', userId).maybeSingle(),
     supabase.from('session_logs').select('*').eq('user_id', userId),
     supabase.from('personal_bests').select('*').eq('user_id', userId),
     supabase.from('session_edits').select('*').eq('user_id', userId),
+    supabase.from('plans').select('*').eq('user_id', userId),
   ]);
 
   const log = {};
   if (settings.data?.start_date) log._startDate = settings.data.start_date;
-  const activePlanName = settings.data?.active_plan_name || localStorage.getItem('locked_in_active_plan') || null;
+  
+  // Get active plan name from database only
+  const activePlanName = settings.data?.active_plan_name || null;
+  
   (logs.data || []).forEach(row => {
     const key = `${row.week_index}_${row.day_index}`;
     log[key] = {
@@ -42,7 +46,16 @@ export async function loadUserData() {
     editsObj[key][row.field] = row.value;
   });
 
-  return { log, pbs: pbsObj, edits: editsObj, activePlanName };
+  // Load active plan data if available
+  let activePlanData = null;
+  if (activePlanName && activePlanName !== 'Default 8-week plan') {
+    const matchingPlan = (plans.data || []).find(p => p.name === activePlanName);
+    if (matchingPlan) {
+      activePlanData = matchingPlan.plan_data;
+    }
+  }
+
+  return { log, pbs: pbsObj, edits: editsObj, activePlanName, activePlanData };
 }
 
 export async function saveSessionLog(weekIndex, dayIndex, data) {
@@ -101,6 +114,16 @@ export async function deleteEdit(weekIndex, dayIndex) {
     .eq('user_id', userId).eq('week_index', weekIndex).eq('day_index', dayIndex);
 }
 
+export async function saveActivePlan(planName) {
+  const userId = await getUserId();
+  if (!userId) return;
+  await supabase.from('app_settings').upsert({
+    user_id: userId,
+    active_plan_name: planName,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
+}
+
 export async function migrateFromLocalStorage() {
   const userId = await getUserId();
   if (!userId) return;
@@ -110,7 +133,13 @@ export async function migrateFromLocalStorage() {
   if (!rawLog) return;
   const localLog = JSON.parse(rawLog);
   const hasRealData = Object.keys(localLog).some(k => !k.startsWith('_') && !k.startsWith('date_'));
-  if (!hasRealData) return;
+  if (!hasRealData) {
+    // No real data, just clear localStorage
+    localStorage.removeItem('training_log_v1');
+    localStorage.removeItem('training_pbs_v1');
+    localStorage.removeItem('training_edits_v1');
+    return;
+  }
 
   // If user already has DB data, just clear stale localStorage so it doesn't
   // accidentally migrate to a different user on this same device in the future.
@@ -149,8 +178,7 @@ export async function migrateFromLocalStorage() {
 
     console.log('Migration complete');
 
-    // Clear localStorage now that data is safely in Supabase,
-    // so this device never migrates stale data to a different user.
+    // Clear localStorage now that data is safely in Supabase
     localStorage.removeItem('training_log_v1');
     localStorage.removeItem('training_pbs_v1');
     localStorage.removeItem('training_edits_v1');

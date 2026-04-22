@@ -2,12 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { PLAN, TYPE_COLORS, DAY_NAMES, DAY_NAMES_FULL } from './planData';
 import { supabase } from './supabase';
 import Auth from './Auth';
-import { loadUserData, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage } from './db';
+import { loadUserData, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage, saveActivePlan } from './db';
 import PlanUpload from './PlanUpload';
-
-//const STORAGE_KEY = 'training_log_v1';
-//const EDITS_KEY = 'training_edits_v1';
-//const PBS_KEY = 'training_pbs_v1';
 
 const STARTING_PBS = {
   run5k:   { label: '5K',            start: '25:46',  current: '25:46',  unit: 'time' },
@@ -40,15 +36,6 @@ function timeDiff(newVal, oldVal) {
   if (s === 0) return `-${m}m`;
   return `-${m}m ${s}s`;
 }
-
-/*function useStorage(key, initial) {
-  const [val, setVal] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : initial; }
-    catch { return initial; }
-  });
-  const set = (v) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
-  return [val, set];
-}*/
 
 const tc = (type) => TYPE_COLORS[type] || TYPE_COLORS.rest;
 
@@ -483,7 +470,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
         <div style={{ padding: '0 20px 40px' }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
             {DAY_NAMES.map((dn, di) => {
-              const d = PLAN[week].days[di];
+              const d = currentPlan[week].days[di];
               const dc = tc(d.type);
               const isDone = log[`${week}_${di}`]?.done;
               return (
@@ -766,16 +753,8 @@ export default function App() {
   const handlePlanLoaded = async (planData, planName) => {
     setActivePlanState(planData || null);
     setActivePlanName(planName || '');
-    const userId = await getUserId();
-    if (userId) {
-      localStorage.setItem(`locked_in_active_plan_${userId}`, planName || '');
-      const { error } = await supabase.from('app_settings').upsert({
-        user_id: userId,
-        active_plan_name: planName || null,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-      if (error) console.error('Failed to save to app_settings (do you need to add the active_plan_name column?):', error);
-    }
+    // Save to database only - no localStorage
+    await saveActivePlan(planName || '');
   };
 
   useEffect(() => {
@@ -805,41 +784,25 @@ export default function App() {
         setLogState(data.log);
         setEditsState(data.edits);
         setPbsState(data.pbs);
-        // Load active plan by ID if one was saved
-        if (data.activePlanId) {
-          supabase.from('plans').select('plan_data, name').eq('id', data.activePlanId).single()
-            .then(({ data: planData }) => {
-              if (planData) {
-                setActivePlanState(planData.plan_data);
-                setActivePlanName(planData.name);
-              }
-            });
-        }
-        // Load active plan by name if one was saved
+        
+        // Load active plan
         if (data.activePlanName === 'Default 8-week plan') {
           setActivePlanName('Default 8-week plan');
           setActivePlanState(PLAN);
-        } else if (data.activePlanName) {
+        } else if (data.activePlanName && data.activePlanData) {
+          // Custom plan loaded from database
           setActivePlanName(data.activePlanName);
-          const userId = await getUserId();
-          const { data: allPlans, error } = await supabase
-            .from('plans')
-            .select('plan_data, name')
-            .eq('user_id', userId);
-          
-          if (error) {
-             setActivePlanName(data.activePlanName + ' (DB Error)');
-          } else if (allPlans && allPlans.length > 0) {
-            const match = allPlans.find(p => p.name.trim() === data.activePlanName.trim());
-            if (match) {
-              setActivePlanState(match.plan_data);
-            } else {
-              setActivePlanName(data.activePlanName + ' (Name Mismatch)');
-            }
-          } else {
-             setActivePlanName(data.activePlanName + ' (No plans found)');
-          }
+          setActivePlanState(data.activePlanData);
+        } else if (data.activePlanName && !data.activePlanData) {
+          // Plan name exists but data not found (corrupted state)
+          setActivePlanName(data.activePlanName + ' (Not found)');
+          setActivePlanState(null);
+        } else {
+          // No active plan set
+          setActivePlanName('');
+          setActivePlanState(null);
         }
+        
         // New user with no plan and no logs → send straight to Plans tab
         const hasLogs = Object.keys(data.log).some(k => !k.startsWith('_') && !k.startsWith('date_'));
         if (!data.activePlanName && !hasLogs) {
