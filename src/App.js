@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PLAN, TYPE_COLORS, DAY_NAMES, DAY_NAMES_FULL } from './planData';
 import { supabase } from './supabase';
 import Auth from './Auth';
-import { loadUserData, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage, saveActivePlan } from './db';
+import { loadUserData, loadPlanProgress, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage, saveActivePlan } from './db';
 import PlanUpload from './PlanUpload';
 
 const STARTING_PBS = {
@@ -751,10 +751,17 @@ export default function App() {
   const [activePlanName, setActivePlanName] = useState('');
 
   const handlePlanLoaded = async (planData, planName) => {
+    // Switch active plan in DB first
+    await saveActivePlan(planName || '');
+
+    // Restore this plan's own saved progress (may be empty for a brand-new plan)
+    const progress = await loadPlanProgress(planName);
+    setLogState(progress?.log || {});
+    setEditsState(progress?.edits || {});
+    // PBs are global (not per-plan) so leave them as-is
+
     setActivePlanState(planData || null);
     setActivePlanName(planName || '');
-    // Save to database only - no localStorage
-    await saveActivePlan(planName || '');
   };
 
   useEffect(() => {
@@ -821,12 +828,12 @@ export default function App() {
   const setLog = async (newLog) => {
     setLogState(newLog);
     if (newLog._startDate && newLog._startDate !== log._startDate) {
-      await saveStartDate(newLog._startDate);
+      await saveStartDate(newLog._startDate, activePlanName);
     }
     for (const [key, val] of Object.entries(newLog)) {
       if (key.startsWith('_') || key.startsWith('date_') || !val?.done) continue;
       const [wi, di] = key.split('_').map(Number);
-      if (!isNaN(wi) && !isNaN(di)) await saveSessionLog(wi, di, val);
+      if (!isNaN(wi) && !isNaN(di)) await saveSessionLog(wi, di, val, activePlanName);
     }
   };
 
@@ -836,14 +843,14 @@ export default function App() {
       const [wi, di] = key.split('_').map(Number);
       if (!isNaN(wi) && !isNaN(di)) {
         for (const [field, value] of Object.entries(val)) {
-          await saveEdit(wi, di, field, value);
+          await saveEdit(wi, di, field, value, activePlanName);
         }
       }
     }
     for (const key of Object.keys(edits)) {
       if (!newEdits[key]) {
         const [wi, di] = key.split('_').map(Number);
-        if (!isNaN(wi) && !isNaN(di)) await deleteEdit(wi, di);
+        if (!isNaN(wi) && !isNaN(di)) await deleteEdit(wi, di, activePlanName);
       }
     }
   };
