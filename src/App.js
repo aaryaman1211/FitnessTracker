@@ -1055,8 +1055,19 @@ export default function App() {
   const goToDay = (week, day) => { setPlanNav({ week, day }); setTab('plan'); };
 
   const handleAddWorkout = async (workout) => {
-    const saved = await saveCustomWorkout(workout, activePlanName || 'Default 8-week plan');
-    if (saved) setCustomWorkoutsState(prev => [...prev, saved]);
+    // Optimistic update — show immediately with a temp ID
+    const tempId = `temp_${Date.now()}`;
+    const optimistic = { ...workout, id: tempId, done: false, created_at: new Date().toISOString() };
+    setCustomWorkoutsState(prev => [...prev, optimistic]);
+    // Sync to DB in background, replace temp entry with real row
+    try {
+      const saved = await saveCustomWorkout(workout, activePlanName || 'Default 8-week plan');
+      if (saved) {
+        setCustomWorkoutsState(prev => prev.map(cw => cw.id === tempId ? saved : cw));
+      }
+    } catch (e) {
+      console.error('Failed to save custom workout:', e);
+    }
   };
 
   const handleDeleteWorkout = async (id) => {

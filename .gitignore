@@ -1,2 +1,5 @@
 icons3
-favicon2.ico 
+favicon2.ico
+node_modules/
+build/
+.DS_Store
