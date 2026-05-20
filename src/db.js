@@ -274,3 +274,81 @@ export async function migrateFromLocalStorage() {
     console.error('Migration failed', e);
   }
 }
+
+// ─── Custom Workouts ───────────────────────────────────────────────────────────
+
+export async function loadCustomWorkouts(planName) {
+  const userId = await getUserId();
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('custom_workouts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('plan_name', planName || 'Default 8-week plan')
+    .order('created_at', { ascending: true });
+  if (error) { console.error('loadCustomWorkouts:', error.message); return []; }
+  return data || [];
+}
+
+export async function saveCustomWorkout(workout, planName) {
+  const userId = await getUserId();
+  if (!userId) return null;
+  const row = {
+    user_id: userId,
+    plan_name: planName || 'Default 8-week plan',
+    week_index: workout.week_index ?? -1,
+    day_index: workout.day_index ?? -1,
+    title: workout.title,
+    type: workout.type || 'other',
+    distance: workout.distance || null,
+    duration: workout.duration || null,
+    notes: workout.notes || null,
+    done: workout.done ?? false,
+    date: workout.date || null,
+    updated_at: new Date().toISOString(),
+  };
+  if (workout.id) {
+    // Update existing
+    const { data, error } = await supabase
+      .from('custom_workouts')
+      .update(row)
+      .eq('id', workout.id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) console.error('saveCustomWorkout update:', error.message);
+    return data;
+  } else {
+    // Insert new
+    const { data, error } = await supabase
+      .from('custom_workouts')
+      .insert(row)
+      .select()
+      .single();
+    if (error) console.error('saveCustomWorkout insert:', error.message);
+    return data;
+  }
+}
+
+export async function deleteCustomWorkout(id) {
+  const userId = await getUserId();
+  if (!userId) return;
+  const { error } = await supabase
+    .from('custom_workouts')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) console.error('deleteCustomWorkout:', error.message);
+}
+
+export async function markCustomWorkoutDone(id, done, planName) {
+  const userId = await getUserId();
+  if (!userId) return;
+  const today = new Date().toISOString().split('T')[0];
+  const { error } = await supabase
+    .from('custom_workouts')
+    .update({ done, date: done ? today : null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) console.error('markCustomWorkoutDone:', error.message);
+}

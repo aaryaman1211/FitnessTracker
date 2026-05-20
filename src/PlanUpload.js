@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 import { getUserId } from './db';
 import { PLAN } from './planData';
 
-export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, log, edits }) {
+export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, log, edits, customWorkouts }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -133,6 +133,19 @@ export default function PlanUpload({ onPlanLoaded, currentPlanName, activePlan, 
       planName,
       exportedAt: new Date().toISOString(),
       plan: planWithData,
+      customWorkouts: (customWorkouts || []).map(cw => ({
+        id: cw.id,
+        title: cw.title,
+        type: cw.type,
+        distance: cw.distance || null,
+        duration: cw.duration || null,
+        notes: cw.notes || null,
+        done: cw.done,
+        date: cw.date || null,
+        week_index: cw.week_index,
+        day_index: cw.day_index,
+        created_at: cw.created_at,
+      })),
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });

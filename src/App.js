@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PLAN, TYPE_COLORS, DAY_NAMES, DAY_NAMES_FULL } from './planData';
 import { supabase } from './supabase';
 import Auth from './Auth';
-import { loadUserData, loadPlanProgress, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage, saveActivePlan } from './db';
+import { loadUserData, loadPlanProgress, saveSessionLog, saveStartDate, savePB, saveEdit, deleteEdit, migrateFromLocalStorage, saveActivePlan, loadCustomWorkouts, saveCustomWorkout, deleteCustomWorkout, markCustomWorkoutDone } from './db';
 import PlanUpload from './PlanUpload';
 
 const STARTING_PBS = {
@@ -247,6 +247,82 @@ function TodayCard({ week, day, log, edits, onPress, activePlan }) {
   );
 }
 
+const WORKOUT_TYPES = [
+  { id: 'run',      label: 'Run',      emoji: '🏃' },
+  { id: 'swim',     label: 'Swim',     emoji: '🏊' },
+  { id: 'strength', label: 'Strength', emoji: '🏋️' },
+  { id: 'cycle',    label: 'Cycle',    emoji: '🚴' },
+  { id: 'yoga',     label: 'Yoga',     emoji: '🧘' },
+  { id: 'other',    label: 'Other',    emoji: '⚡' },
+];
+
+function AddWorkoutModal({ onSave, onClose, weekIndex, dayIndex }) {
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('run');
+  const [distance, setDistance] = useState('');
+  const [duration, setDuration] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const inputStyle = { width: '100%', padding: '11px 12px', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 10, color: 'var(--text)', fontSize: 14, fontFamily: 'var(--font-display)', boxSizing: 'border-box' };
+  const labelStyle = { fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--font-mono)', display: 'block', marginBottom: 6, letterSpacing: '0.06em' };
+
+  const handleSave = () => {
+    if (!title.trim()) return;
+    onSave({ title: title.trim(), type, distance: distance.trim() || null, duration: duration.trim() || null, notes: notes.trim() || null, week_index: weekIndex, day_index: dayIndex });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', zIndex: 100 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ width: '100%', background: 'var(--bg2)', borderRadius: '20px 20px 0 0', padding: '24px 24px calc(24px + var(--safe-bottom))', border: '1px solid var(--border)', maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Add a Workout</div>
+        <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 20 }}>Log something extra you did today</div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>WORKOUT TITLE</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Evening jog, Leg day..." style={inputStyle} autoFocus />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>TYPE</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {WORKOUT_TYPES.map(wt => (
+              <button key={wt.id} onClick={() => setType(wt.id)}
+                style={{ padding: '6px 12px', borderRadius: 20, border: type === wt.id ? '1.5px solid #e8583a' : '1px solid var(--border)', background: type === wt.id ? 'rgba(232,88,58,0.15)' : 'transparent', color: type === wt.id ? '#e8583a' : 'var(--text2)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+                {wt.emoji} {wt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div>
+            <label style={labelStyle}>DISTANCE</label>
+            <input value={distance} onChange={e => setDistance(e.target.value)} placeholder="e.g. 5km" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>DURATION</label>
+            <input value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 30 min" style={inputStyle} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>NOTES</label>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="How did it go?"
+            rows={3}
+            style={{ ...inputStyle, resize: 'none', fontFamily: 'var(--font-display)' }} />
+        </div>
+
+        <button onClick={handleSave} disabled={!title.trim()}
+          style={{ width: '100%', padding: '14px', borderRadius: 12, background: title.trim() ? '#e8583a' : 'var(--bg3)', border: 'none', color: title.trim() ? '#fff' : 'var(--text3)', fontSize: 15, fontWeight: 700, cursor: title.trim() ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-display)' }}>
+          Add Workout
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LogModal({ sessionType, onSave, onClose, existing }) {
   const isRun = sessionType === 'run' || sessionType === 'bonus';
   const isSwim = sessionType === 'swim';
@@ -332,7 +408,79 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
   );
 }
 
-function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setPbs, activePlan }) {
+function CustomWorkoutsSection({ weekIndex, dayIndex, isRestDay, customWorkouts, onAdd, onDelete, onToggleDone }) {
+  const dayWorkouts = customWorkouts.filter(cw => cw.week_index === weekIndex && cw.day_index === dayIndex);
+  const WORKOUT_EMOJI = { run: '🏃', swim: '🏊', strength: '🏋️', cycle: '🚴', yoga: '🧘', other: '⚡' };
+
+  return (
+    <div style={{ marginTop: isRestDay ? 0 : 16 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text2)', letterSpacing: '0.08em' }}>
+          YOUR WORKOUTS{dayWorkouts.length > 0 ? ` (${dayWorkouts.length})` : ''}
+        </div>
+        <button onClick={onAdd}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.35)', borderRadius: 20, color: '#a78bfa', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+          + Add Workout
+        </button>
+      </div>
+
+      {/* Workout cards */}
+      {dayWorkouts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+          {dayWorkouts.map(cw => (
+            <div key={cw.id} style={{
+              background: cw.done ? 'rgba(167,139,250,0.08)' : 'var(--bg2)',
+              border: `1px solid ${cw.done ? 'rgba(167,139,250,0.35)' : 'rgba(167,139,250,0.2)'}`,
+              borderRadius: 12, padding: '12px 14px',
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+            }}>
+              {/* Done toggle */}
+              <button
+                onClick={() => onToggleDone(cw.id, !cw.done)}
+                style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                  background: cw.done ? '#a78bfa' : 'transparent',
+                  border: `2px solid ${cw.done ? '#a78bfa' : 'rgba(167,139,250,0.5)'}`,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, color: '#fff',
+                }}>
+                {cw.done ? '✓' : ''}
+              </button>
+
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                  <span style={{ fontSize: 13 }}>{WORKOUT_EMOJI[cw.type] || '⚡'}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: cw.done ? 'var(--text2)' : 'var(--text)', textDecoration: cw.done ? 'line-through' : 'none' }}>{cw.title}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {cw.distance && <span style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{cw.distance}</span>}
+                  {cw.duration && <span style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{cw.duration}</span>}
+                  {cw.notes && <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-display)', fontStyle: 'italic', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cw.notes}</span>}
+                </div>
+              </div>
+
+              {/* Delete */}
+              <button onClick={() => onDelete(cw.id)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 16, padding: '0 2px', lineHeight: 1, flexShrink: 0 }}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {dayWorkouts.length === 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text3)', fontStyle: 'italic', padding: '10px 0' }}>
+          No extra workouts added yet
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setPbs, activePlan, customWorkouts, onAddWorkout, onDeleteWorkout, onToggleWorkoutDone }) {
   const currentPlan = activePlan;
 
   if (!currentPlan) {
@@ -345,6 +493,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
   const [editing, setEditing] = useState(null);
   const [editVal, setEditVal] = useState('');
   const [logModal, setLogModal] = useState(false);
+  const [addWorkoutModal, setAddWorkoutModal] = useState(false);
   const [pendingPBs, setPendingPBs] = useState([]);
 
   useEffect(() => {
@@ -443,6 +592,7 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
               : d;
             const isDone = log[`${week}_${di}`]?.done;
             const dc = tc(d.type);
+            const dayCustom = (customWorkouts || []).filter(cw => cw.week_index === week && cw.day_index === di);
             return (
               <div key={di} onClick={() => { setDay(di); setView('day'); }}
                 style={{ background: 'var(--bg2)', border: `1px solid ${isDone ? 'rgba(90,196,122,0.3)' : 'var(--border)'}`, borderRadius: 12, padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
@@ -454,9 +604,10 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
                     {ed.title}
                     {edits[`${week}_${di}`] && <span style={{ fontSize: 9, color: '#e8a83a', fontFamily: 'var(--font-mono)' }}>EDITED</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {ed.distance && <span style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{ed.distance}</span>}
                     {ed.pace && <span style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>· {ed.pace}</span>}
+                    {dayCustom.length > 0 && <span style={{ fontSize: 9, color: '#a78bfa', fontFamily: 'var(--font-mono)', background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 4, padding: '1px 5px' }}>+{dayCustom.length} extra</span>}
                   </div>
                 </div>
                 {isDone
@@ -560,6 +711,17 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
               )}
             </div>
           )}
+
+          {/* Custom workouts for this day */}
+          <CustomWorkoutsSection
+            weekIndex={week}
+            dayIndex={day}
+            isRestDay={sessionData.type === 'rest'}
+            customWorkouts={customWorkouts || []}
+            onAdd={() => setAddWorkoutModal(true)}
+            onDelete={onDeleteWorkout}
+            onToggleDone={onToggleWorkoutDone}
+          />
         </div>
       )}
 
@@ -569,6 +731,14 @@ function PlanScreen({ initWeek, initDay, log, setLog, edits, setEdits, pbs, setP
           existing={logEntry}
           onSave={handleSaveLog}
           onClose={() => setLogModal(false)}
+        />
+      )}
+      {addWorkoutModal && (
+        <AddWorkoutModal
+          weekIndex={week}
+          dayIndex={day}
+          onSave={(workout) => { onAddWorkout(workout); setAddWorkoutModal(false); }}
+          onClose={() => setAddWorkoutModal(false)}
         />
       )}
     </div>
@@ -749,6 +919,7 @@ export default function App() {
   const [planNav, setPlanNav] = useState(null);
   const [activePlan, setActivePlanState] = useState(null);
   const [activePlanName, setActivePlanName] = useState('');
+  const [customWorkouts, setCustomWorkoutsState] = useState([]);
 
   const handlePlanLoaded = async (planData, planName) => {
     // Switch active plan in DB first
@@ -762,6 +933,9 @@ export default function App() {
 
     setActivePlanState(planData || null);
     setActivePlanName(planName || '');
+    // Load custom workouts for this plan
+    const cw = await loadCustomWorkouts(planName || 'Default 8-week plan');
+    setCustomWorkoutsState(cw);
   };
 
   useEffect(() => {
@@ -815,6 +989,10 @@ export default function App() {
         if (!data.activePlanName && !hasLogs) {
           setTab('plans');
         }
+
+        // Load custom workouts for the active plan
+        const planForCW = data.activePlanName || 'Default 8-week plan';
+        loadCustomWorkouts(planForCW).then(cw => setCustomWorkoutsState(cw));
       }
     })
     .catch(err => console.error('Data load error:', err))
@@ -867,6 +1045,21 @@ export default function App() {
 
   const goToDay = (week, day) => { setPlanNav({ week, day }); setTab('plan'); };
 
+  const handleAddWorkout = async (workout) => {
+    const saved = await saveCustomWorkout(workout, activePlanName || 'Default 8-week plan');
+    if (saved) setCustomWorkoutsState(prev => [...prev, saved]);
+  };
+
+  const handleDeleteWorkout = async (id) => {
+    await deleteCustomWorkout(id);
+    setCustomWorkoutsState(prev => prev.filter(cw => cw.id !== id));
+  };
+
+  const handleToggleWorkoutDone = async (id, done) => {
+    await markCustomWorkoutDone(id, done, activePlanName || 'Default 8-week plan');
+    setCustomWorkoutsState(prev => prev.map(cw => cw.id === id ? { ...cw, done } : cw));
+  };
+
   if (authLoading || dataLoading) return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontSize: 13, color: '#8a8780', fontFamily: "'DM Mono', monospace" }}>
@@ -889,6 +1082,10 @@ export default function App() {
       edits={edits} setEdits={setEdits}
       pbs={pbs} setPbs={setPbs}
       activePlan={activePlan}
+      customWorkouts={customWorkouts}
+      onAddWorkout={handleAddWorkout}
+      onDeleteWorkout={handleDeleteWorkout}
+      onToggleWorkoutDone={handleToggleWorkoutDone}
     />
   )}
   {tab === 'stats' && <StatsScreen log={log} pbs={pbs} />}
@@ -899,6 +1096,7 @@ export default function App() {
       activePlan={activePlan}
       log={log}
       edits={edits}
+      customWorkouts={customWorkouts}
     />
   )}
   {tab === 'account' && (
