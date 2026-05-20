@@ -248,12 +248,15 @@ function TodayCard({ week, day, log, edits, onPress, activePlan }) {
 }
 
 const WORKOUT_TYPES = [
-  { id: 'run',      label: 'Run',      emoji: '🏃' },
-  { id: 'swim',     label: 'Swim',     emoji: '🏊' },
-  { id: 'strength', label: 'Strength', emoji: '🏋️' },
-  { id: 'cycle',    label: 'Cycle',    emoji: '🚴' },
-  { id: 'yoga',     label: 'Yoga',     emoji: '🧘' },
-  { id: 'other',    label: 'Other',    emoji: '⚡' },
+  { id: 'run',          label: 'Run',         emoji: '🏃' },
+  { id: 'swim',         label: 'Swim',        emoji: '🏊' },
+  { id: 'strength',     label: 'Strength',    emoji: '🏋️' },
+  { id: 'cycle',        label: 'Cycle',       emoji: '🚴' },
+  { id: 'yoga',         label: 'Yoga',        emoji: '🧘' },
+  { id: 'basketball',   label: 'Basketball',  emoji: '🏀' },
+  { id: 'football',     label: 'Football',    emoji: '⚽' },
+  { id: 'pickleball',   label: 'Pickleball',  emoji: '🎾' },
+  { id: 'other',        label: 'Other',       emoji: '⚡' },
 ];
 
 function AddWorkoutModal({ onSave, onClose, weekIndex, dayIndex }) {
@@ -261,6 +264,7 @@ function AddWorkoutModal({ onSave, onClose, weekIndex, dayIndex }) {
   const [type, setType] = useState('run');
   const [distance, setDistance] = useState('');
   const [duration, setDuration] = useState('');
+  const [hr, setHr] = useState('');
   const [notes, setNotes] = useState('');
 
   const inputStyle = { width: '100%', padding: '11px 12px', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 10, color: 'var(--text)', fontSize: 14, fontFamily: 'var(--font-display)', boxSizing: 'border-box' };
@@ -268,7 +272,7 @@ function AddWorkoutModal({ onSave, onClose, weekIndex, dayIndex }) {
 
   const handleSave = () => {
     if (!title.trim()) return;
-    onSave({ title: title.trim(), type, distance: distance.trim() || null, duration: duration.trim() || null, notes: notes.trim() || null, week_index: weekIndex, day_index: dayIndex });
+    onSave({ title: title.trim(), type, distance: distance.trim() || null, duration: duration.trim() || null, hr: hr.trim() || null, notes: notes.trim() || null, week_index: weekIndex, day_index: dayIndex });
   };
 
   return (
@@ -295,7 +299,7 @@ function AddWorkoutModal({ onSave, onClose, weekIndex, dayIndex }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div>
             <label style={labelStyle}>DISTANCE</label>
             <input value={distance} onChange={e => setDistance(e.target.value)} placeholder="e.g. 5km" style={inputStyle} />
@@ -303,6 +307,10 @@ function AddWorkoutModal({ onSave, onClose, weekIndex, dayIndex }) {
           <div>
             <label style={labelStyle}>DURATION</label>
             <input value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 30 min" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>AVG HR (BPM)</label>
+            <input value={hr} onChange={e => setHr(e.target.value)} placeholder="e.g. 148" style={inputStyle} />
           </div>
         </div>
 
@@ -410,7 +418,7 @@ function LogModal({ sessionType, onSave, onClose, existing }) {
 
 function CustomWorkoutsSection({ weekIndex, dayIndex, isRestDay, customWorkouts, onAdd, onDelete, onToggleDone }) {
   const dayWorkouts = customWorkouts.filter(cw => cw.week_index === weekIndex && cw.day_index === dayIndex);
-  const WORKOUT_EMOJI = { run: '🏃', swim: '🏊', strength: '🏋️', cycle: '🚴', yoga: '🧘', other: '⚡' };
+  const WORKOUT_EMOJI = { run: '🏃', swim: '🏊', strength: '🏋️', cycle: '🚴', yoga: '🧘', basketball: '🏀', football: '⚽', pickleball: '🎾', other: '⚡' };
 
   return (
     <div style={{ marginTop: isRestDay ? 0 : 16 }}>
@@ -457,6 +465,7 @@ function CustomWorkoutsSection({ weekIndex, dayIndex, isRestDay, customWorkouts,
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {cw.distance && <span style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{cw.distance}</span>}
                   {cw.duration && <span style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>{cw.duration}</span>}
+                  {cw.hr && <span style={{ fontSize: 10, color: '#e8a83a', fontFamily: 'var(--font-mono)' }}>{cw.hr} bpm</span>}
                   {cw.notes && <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--font-display)', fontStyle: 'italic', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cw.notes}</span>}
                 </div>
               </div>

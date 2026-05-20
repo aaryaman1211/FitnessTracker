@@ -11,6 +11,7 @@ create table if not exists custom_workouts (
   type text not null default 'other',
   distance text,
   duration text,
+  hr text,
   notes text,
   done boolean not null default false,
   date text,
@@ -27,3 +28,6 @@ create policy "Users can manage their own custom workouts"
 
 create index if not exists custom_workouts_user_plan
   on custom_workouts (user_id, plan_name, week_index, day_index);
+
+-- If you already ran the previous migration, run this too to add the hr column:
+alter table custom_workouts add column if not exists hr text;

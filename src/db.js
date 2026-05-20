@@ -302,6 +302,7 @@ export async function saveCustomWorkout(workout, planName) {
     type: workout.type || 'other',
     distance: workout.distance || null,
     duration: workout.duration || null,
+    hr: workout.hr || null,
     notes: workout.notes || null,
     done: workout.done ?? false,
     date: workout.date || null,
